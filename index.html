@@ -314,7 +314,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 18:55 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 19:05 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -1927,13 +1927,16 @@ function renderColleges(){
   const summary = rows.length ? `<div class="note" style="margin:0 0 8px;font-size:13px;background:#eef2ff;color:#3730a3">
       <b>${rows.length} college${rows.length>1?'s':''}</b>${where} · <b>${seatsLeft} seats pending</b> for our students (${[openN&&openN+' open', almost&&almost+' almost full', full&&full+' full'].filter(Boolean).join(', ')}).<br>Fees from ₹${cheapest.toFixed(2)} L/yr.${near || (rows[0]?` Best match: <b>${esc(rows[0].name)}</b> (${rows[0].rem} seats left).`:'')}</div>` : '';
   el.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px"><b>🏫 Colleges for ${ids.map(shortDom).join(', ')}</b><span class="sp"></span><span class="muted" style="font-size:12px">${rows.length} of ${all}</span></div>
+    <div style="display:flex;align-items:center;gap:8px"><b>🏫 Colleges for ${ids.map(shortDom).join(', ')}</b><span title="Order: nearest to farthest when an area or PIN is chosen; otherwise best fit. Distances, fees and seats are mock values." style="cursor:help;width:17px;height:17px;border-radius:50%;border:1.5px solid #64748b;color:#64748b;display:inline-flex;align-items:center;justify-content:center;font:700 11px Georgia,serif">i</span><span class="sp"></span><span class="muted" style="font-size:12px">${rows.length} of ${all}</span></div>
     <div style="display:flex;gap:8px 12px;flex-wrap:wrap;align-items:center;margin:8px 0 10px">
       ${sel('fee',[['','Any fee'],['1','≤ ₹1 L/yr'],['1.5','≤ ₹1.5 L/yr'],['2','≤ ₹2 L/yr'],['3','≤ ₹3 L/yr'],['5','≤ ₹5 L/yr']])}
       ${sel('sort',[...(mcCtx.area?[['near','📍 Nearest first']]:[]),['rec','⭐ Recommended first'],['fee','Lowest fee'],['seats','Most seats left']])}
       ${mcCtx.area?sel('km',[['','Any distance'],['1','Within 1 km'],['2','Within 2 km'],['5','Within 5 km'],['10','Within 10 km']]):''}
       ${tick('fit','Fits score ('+score+'%)')} ${tick('open','Seats open')}</div>${distNote}${summary}
-    ${rows.length?`<div class="muted" style="font-size:12px;margin:-2px 0 6px" title="Order of this list">ⓘ ${byKm?'Listed <b>nearest to farthest</b> from '+esc(mcCtx.area)+' (straight-line distance).':f.sort==='fee'?'Listed by lowest fee.':f.sort==='seats'?'Listed by most seats left.':'Listed by best fit (score, seats, fee).'+(mcCtx.dist==='Bengaluru Urban'&&!mcCtx.area?' Choose an area or PIN to sort by distance.':'')}</div>`:''}
+    ${rows.length?`<div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:0 0 8px;padding:7px 10px;border-radius:8px;background:${byKm?'#ecfdf5;color:#065f46':'#fff7ed;color:#9a3412'}">
+      <span style="flex:none;width:18px;height:18px;border-radius:50%;background:currentColor;display:inline-flex;align-items:center;justify-content:center"><b style="color:#fff;font:700 12px Georgia,serif">i</b></span>
+      <span>${byKm?'Colleges are listed <b>nearest to farthest</b> from <b>'+esc(mcCtx.area)+'</b> (straight-line distance shown on each college).'
+        :'Listed by '+(f.sort==='fee'?'<b>lowest fee</b>':f.sort==='seats'?'<b>most seats left</b>':'<b>best fit</b> (score, seats, fee)')+'. To list <b>nearest to farthest</b>, choose <b>Bengaluru Urban</b> and an <b>area</b>, or type a <b>PIN code</b>.'}</span></div>`:''}
     <div style="max-height:52vh;overflow:auto">${rows.length ? rows.map(r=>`
       <div class="colrow${mcCtx.sug.has(r.name)?' sug':''}${r.fits?'':' dim'}">
         <input type="checkbox" title="Suggested to the candidate" style="width:16px;height:16px;margin:0" ${mcCtx.sug.has(r.name)?'checked':''} onchange="this.checked?mcCtx.sug.add(this.dataset.n):mcCtx.sug.delete(this.dataset.n);renderColleges();renderCourseBox(true)" data-n="${esc(r.name)}">
