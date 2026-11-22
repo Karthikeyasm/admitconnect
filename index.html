@@ -51,6 +51,8 @@ aside{background:var(--side);color:#cbd5e1;padding:18px 12px;position:sticky;top
 .dom .car{width:14px;color:#94a3b8;font-size:11px;cursor:pointer}
 .dom.sub{padding:6px 10px 6px 34px;font-size:13px}
 .dom.sub .ic{width:18px}
+.dom.sub.grph b{font-weight:600;color:#e2e8f0}
+.dom.sub.sub2{padding-left:52px;font-size:12.5px}
 .admbox{border-top:1px solid #1f2937;margin-top:12px;padding-top:4px}
 .tcard{background:var(--side2);border-radius:10px;padding:12px;cursor:pointer;margin:0 2px}
 .tcard:hover{filter:brightness(1.15)}
@@ -271,7 +273,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 15:10 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 15:20 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -323,8 +325,8 @@ aside{position:sticky}
         <tr><td>candidate_name</td><td>Ananya R</td><td>Yes</td></tr>
         <tr><td>parent_name</td><td>Lakshmi R (used in the WhatsApp/SMS greeting)</td><td>Yes</td></tr>
         <tr><td>phone</td><td>+91 98XXXXXX12</td><td>Yes</td></tr>
-        <tr><td>level</td><td>PU / UG / PG</td><td>Yes</td></tr>
-        <tr><td>course</td><td>PU Biology, NEET Integrated, Engineering, NEET Coaching, MBA…</td><td>Yes</td></tr>
+        <tr><td>level</td><td>PU / Degree / Masters</td><td>Yes</td></tr>
+        <tr><td>course</td><td>Science – State Board + KCET, Science – ICSE, Commerce, B.E/B.Tech, BCA, MBA, MCA…</td><td>Yes</td></tr>
         <tr><td>preferred_language</td><td>English / Tamil / Hindi / Telugu / Kannada / Malayalam</td><td>No</td></tr>
         <tr><td>city</td><td>Chennai</td><td>No</td></tr>
         <tr><td>score_percent</td><td>86.4</td><td>No</td></tr>
@@ -354,31 +356,32 @@ const T_Q    = 95;        // "press 8 to record your query"
 
 // Course levels shown as groups in the left panel and as the 2nd IVR menu
 const LEVELS = [
-  {id:'pu', name:'PU / +1 (11th–12th)', ic:'🎒', key:'1'},
-  {id:'ug', name:'UG – Undergraduate',  ic:'🎓', key:'2'},
-  {id:'pg', name:'PG – Postgraduate',   ic:'📜', key:'3'}
+  {id:'pu', name:'PU (11th–12th)', ic:'🎒', key:'1'},
+  {id:'ug', name:'Degree (UG)',    ic:'🎓', key:'2'},
+  {id:'pg', name:'Masters (PG)',   ic:'📜', key:'3'}
 ];
 // Courses (key = digit in the course menu of that level; w = share of mock candidates)
+// Sub-groups inside a level (PU › Science)
+const GROUPS = { pu_sci:{name:'Science', full:'PU Science', ic:'🔬', lv:'pu'} };
 const DOMAINS = [
   {id:'all', name:'All courses', short:'All', ic:'◎'},
-  {id:'pu_bio', lv:'pu', key:'1', ic:'🧬', w:.07, name:'Science – Biology (PCMB)', short:'PU Biology'},
-  {id:'pu_cs',  lv:'pu', key:'2', ic:'💻', w:.06, name:'Science – Computer (PCMC)', short:'PU Computer Sci.'},
-  {id:'pu_com', lv:'pu', key:'3', ic:'₹',  w:.05, name:'Commerce', short:'PU Commerce'},
-  {id:'pu_arts',lv:'pu', key:'4', ic:'✎',  w:.03, name:'Arts', short:'PU Arts'},
-  {id:'pu_neet',lv:'pu', key:'5', ic:'🩺', w:.07, name:'NEET Integrated (PU + NEET)', short:'NEET Integrated'},
-  {id:'med',  lv:'ug', key:'1', ic:'✚', w:.10, name:'Medical (MBBS/BDS)', short:'Medical'},
-  {id:'neet', lv:'ug', key:'2', ic:'📘', w:.06, name:'NEET Coaching (Medical entrance)', short:'NEET Coaching'},
-  {id:'eng',  lv:'ug', key:'3', ic:'⚙', w:.16, name:'Engineering (B.E/B.Tech)', short:'Engineering'},
-  {id:'com',  lv:'ug', key:'4', ic:'₹', w:.08, name:'Commerce (B.Com/BBA)', short:'Commerce'},
-  {id:'arts', lv:'ug', key:'5', ic:'✎', w:.04, name:'Arts & Humanities (B.A)', short:'Arts'},
-  {id:'sci',  lv:'ug', key:'6', ic:'⚗', w:.05, name:'Science (B.Sc)', short:'Science'},
-  {id:'law',  lv:'ug', key:'7', ic:'⚖', w:.03, name:'Law (LLB)', short:'Law'},
-  {id:'pg_mba', lv:'pg', key:'1', ic:'💼', w:.04, name:'MBA', short:'MBA'},
-  {id:'pg_mtech',lv:'pg',key:'2', ic:'🛠', w:.03, name:'M.E / M.Tech', short:'M.Tech'},
-  {id:'pg_msc', lv:'pg', key:'3', ic:'🔬', w:.03, name:'M.Sc', short:'M.Sc'},
-  {id:'pg_mcom',lv:'pg', key:'4', ic:'📊', w:.02, name:'M.Com', short:'M.Com'},
-  {id:'pg_ma',  lv:'pg', key:'5', ic:'📖', w:0, name:'M.A', short:'M.A'},
-  {id:'pg_md',  lv:'pg', key:'6', ic:'🩻', w:.06, name:'MD / MS (NEET-PG)', short:'MD / MS'}
+  // PU › Science (board / coaching combinations)
+  {id:'pu_sb_kcet', lv:'pu', grp:'pu_sci', key:'1', ic:'📗', w:.10, name:'State Board + KCET', short:'PU Sci · SB + KCET'},
+  {id:'pu_sb_jee',  lv:'pu', grp:'pu_sci', key:'2', ic:'📐', w:.09, name:'State Board + IIT-JEE', short:'PU Sci · SB + IIT-JEE'},
+  {id:'pu_sb_neet', lv:'pu', grp:'pu_sci', key:'3', ic:'🩺', w:.09, name:'State Board + NEET', short:'PU Sci · SB + NEET'},
+  {id:'pu_icse',    lv:'pu', grp:'pu_sci', key:'4', ic:'📘', w:.05, name:'ICSE', short:'PU Sci · ICSE'},
+  {id:'pu_cbse',    lv:'pu', grp:'pu_sci', key:'5', ic:'🏛', w:.06, name:'Central (CBSE)', short:'PU Sci · CBSE'},
+  // PU › Commerce
+  {id:'pu_com',     lv:'pu', key:'6', ic:'₹', w:.08, name:'Commerce', short:'PU Commerce'},
+  // Degree
+  {id:'eng',  lv:'ug', key:'1', ic:'⚙', w:.18, name:'B.E / B.Tech', short:'B.E / B.Tech'},
+  {id:'bca',  lv:'ug', key:'2', ic:'💻', w:.09, name:'BCA', short:'BCA'},
+  {id:'bba',  lv:'ug', key:'3', ic:'💼', w:.08, name:'BBA', short:'BBA'},
+  {id:'bcom', lv:'ug', key:'4', ic:'📊', w:.08, name:'B.Com', short:'B.Com'},
+  // Masters
+  {id:'mtech',lv:'pg', key:'1', ic:'🛠', w:.04, name:'M.Tech', short:'M.Tech'},
+  {id:'mba',  lv:'pg', key:'2', ic:'📈', w:.06, name:'MBA', short:'MBA'},
+  {id:'mca',  lv:'pg', key:'3', ic:'🖥', w:0,   name:'MCA', short:'MCA'}       // no list uploaded yet → shows "Empty"
 ];
 const COURSES = DOMAINS.slice(1);
 const levelOf = id => (DOMAINS.find(d=>d.id===id)||{}).lv;
@@ -432,25 +435,20 @@ const REPLIES = {
 
 /* ---------------- College master config (mock) ---------------- */
 const COLLEGE_CFG = {
-  pu_bio: {n:6, suf:['PU College','Pre-University College','Junior College'], fee:[0.4,1.5], seat:[40,3,8], courses:['PCMB']},
-  pu_cs:  {n:6, suf:['PU College','Pre-University College','Junior College'], fee:[0.4,1.5], seat:[40,3,8], courses:['PCMC']},
-  pu_com: {n:5, suf:['PU College','Commerce PU College','Junior College'], fee:[0.3,1.0], seat:[40,3,8], courses:['CEBA','SEBA']},
-  pu_arts:{n:4, suf:['PU College','Arts PU College','Junior College'], fee:[0.2,0.8], seat:[40,2,6], courses:['HEPS','HEBA']},
-  pu_neet:{n:5, suf:['NEET Academy','Integrated PU Campus','Medical Foundation PU'], fee:[1.5,3.5], seat:[60,2,6], courses:['PCMB + NEET (2-yr integrated)']},
-  med:  {n:8,  suf:['Medical College','Institute of Medical Sciences','Dental College'], fee:[8,25], seat:[50,2,5], courses:['MBBS','BDS']},
-  neet: {n:5,  suf:['NEET Coaching Centre','Medical Entrance Academy','NEET Long-term Institute'], fee:[0.8,2.2], seat:[60,2,6], courses:['NEET long-term (1-yr)','NEET crash course']},
+  pu_sb_kcet:{n:6, suf:['PU College','Pre-University College','Junior College'], fee:[0.5,1.5], seat:[40,3,8], courses:['PCMB / PCMC + KCET coaching']},
+  pu_sb_jee: {n:5, suf:['IIT-JEE Academy PU','Integrated PU College','Science PU College'], fee:[1.5,3.5], seat:[40,2,6], courses:['PCMC + IIT-JEE coaching (2-yr integrated)']},
+  pu_sb_neet:{n:5, suf:['NEET Academy PU','Integrated PU Campus','Medical Foundation PU'], fee:[1.5,3.5], seat:[40,2,6], courses:['PCMB + NEET coaching (2-yr integrated)']},
+  pu_icse:   {n:4, suf:['ICSE Junior College','International PU School'], fee:[0.8,2.2], seat:[30,2,5], courses:['ISC Science (PCMB / PCMC)']},
+  pu_cbse:   {n:5, suf:['CBSE Senior Secondary School','Central School (Sr. Sec.)','Public School (CBSE)'], fee:[0.8,2.2], seat:[40,2,6], courses:['CBSE Science (PCMB / PCMC)']},
+  pu_com:    {n:5, suf:['PU College','Commerce PU College','Junior College'], fee:[0.3,1.0], seat:[40,3,8], courses:['CEBA','SEBA']},
   eng:  {n:15, suf:['Institute of Technology','College of Engineering','Engineering College','Tech University'], fee:[1.2,3.5], seat:[60,2,8],
         courses:['B.E Computer Science','B.Tech IT','B.E Electronics & Communication','B.E Mechanical','B.Tech AI & Data Science']},
-  com:  {n:10, suf:['School of Commerce','College of Business','Commerce Academy'], fee:[0.6,1.8], seat:[60,2,8], courses:['B.Com General','B.Com Accounting & Finance','BBA']},
-  arts: {n:8,  suf:['College of Arts','Liberal Arts College','Institute of Humanities'], fee:[0.4,1.2], seat:[60,2,8], courses:['B.A English','B.A Economics','B.A Psychology','B.A Journalism']},
-  sci:  {n:9,  suf:['College of Science','Science Institute','Degree College'], fee:[0.5,1.5], seat:[60,2,8], courses:['B.Sc Computer Science','B.Sc Physics','B.Sc Biotechnology','B.Sc Mathematics']},
-  law:  {n:6,  suf:['School of Law','National Law College','Law Institute'], fee:[1,3], seat:[60,2,6], courses:['B.A LLB (5-yr)','BBA LLB (5-yr)','LLB (3-yr)']},
-  pg_mba:  {n:6, suf:['Business School','School of Management','Institute of Management'], fee:[3,12], seat:[60,1,4], courses:['MBA Finance','MBA Marketing','MBA HR','MBA Business Analytics']},
-  pg_mtech:{n:5, suf:['Institute of Technology (PG)','Graduate School of Engineering'], fee:[1,3], seat:[18,1,4], courses:['M.Tech CSE','M.Tech VLSI','M.E Structural']},
-  pg_msc:  {n:5, suf:['PG Centre for Sciences','Graduate College of Science'], fee:[0.5,1.5], seat:[20,1,4], courses:['M.Sc Data Science','M.Sc Chemistry','M.Sc Biotechnology']},
-  pg_mcom: {n:4, suf:['PG College of Commerce','Graduate School of Commerce'], fee:[0.4,1.0], seat:[30,1,4], courses:['M.Com Finance','M.Com Accounting']},
-  pg_ma:   {n:4, suf:['PG College of Arts','Graduate School of Humanities'], fee:[0.3,0.8], seat:[30,1,4], courses:['M.A English','M.A Economics','M.A Psychology']},
-  pg_md:   {n:5, suf:['PG Institute of Medical Sciences','Medical College & Hospital (PG)'], fee:[10,40], seat:[10,2,6], courses:['MD General Medicine','MS General Surgery','MD Paediatrics']}
+  bca:  {n:7, suf:['College of Computer Applications','Degree College','Institute of Computer Studies'], fee:[0.6,1.8], seat:[60,2,6], courses:['BCA','BCA (Data Science)','BCA (Cloud & Security)']},
+  bba:  {n:7, suf:['School of Management Studies','Business College','Degree College of Management'], fee:[0.6,2.0], seat:[60,2,6], courses:['BBA','BBA (Aviation)','BBA (Business Analytics)']},
+  bcom: {n:8, suf:['School of Commerce','College of Business','Commerce Academy'], fee:[0.6,1.8], seat:[60,2,8], courses:['B.Com General','B.Com Accounting & Finance','B.Com (Professional)']},
+  mtech:{n:5, suf:['Institute of Technology (PG)','Graduate School of Engineering'], fee:[1,3], seat:[18,1,4], courses:['M.Tech CSE','M.Tech VLSI','M.Tech Structural']},
+  mba:  {n:6, suf:['Business School','School of Management','Institute of Management'], fee:[3,12], seat:[60,1,4], courses:['MBA Finance','MBA Marketing','MBA HR','MBA Business Analytics']},
+  mca:  {n:5, suf:['Institute of Computer Applications','PG Centre for Computer Science'], fee:[0.8,2.5], seat:[30,1,4], courses:['MCA','MCA (AI & ML)']}
 };
 const PLACE = ['Northfield','Sunrise','Lakeview','Greenvale','St. Aurora','Riverside','Meridian','Pinecrest','Horizon','Willowbrook',
   'Cedar Hill','Bluebell','Silverleaf','Orchid Valley','Maple Ridge','Kingsway','Emerald','Harbor','Oakwood','Crestview','Brookfield',
@@ -487,10 +485,11 @@ const iso  = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'
 const fmtD = d => d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
 const mmss = s => Math.floor(s/60)+':'+String(Math.round(s%60)).padStart(2,'0');
 const lakh = v => '₹'+(v>=100 ? (v/100).toFixed(2)+' Cr' : v.toFixed(2)+' L');
-const domName = id => { if (id.startsWith('L:')) return levelName(id.slice(2)); const d = DOMAINS.find(x=>x.id===id); return d.lv ? levelName(d.lv).split(' ')[0]+' · '+d.name : d.name; };
-const shortDom = id => id.startsWith('L:') ? levelName(id.slice(2)).split(' (')[0] : DOMAINS.find(d=>d.id===id).short;
+const domName = id => { if (id.startsWith('L:')) return levelName(id.slice(2)); if (id.startsWith('G:')) return GROUPS[id.slice(2)].full; const d = DOMAINS.find(x=>x.id===id); return d.lv ? levelName(d.lv).split(' ')[0]+(d.grp?' · '+GROUPS[d.grp].name:'')+' · '+d.name : d.name; };
+const shortDom = id => id.startsWith('L:') ? levelName(id.slice(2)).split(' (')[0] : id.startsWith('G:') ? GROUPS[id.slice(2)].full : DOMAINS.find(d=>d.id===id).short;
 // Does a course id fall inside the current sidebar selection (all / a level / one course)?
-const matchDom = id => curDom==='all' || id===curDom || (curDom.startsWith('L:') && levelOf(id)===curDom.slice(2));
+const groupOf_ = id => (DOMAINS.find(d=>d.id===id)||{}).grp;
+const matchDom = id => curDom==='all' || id===curDom || (curDom.startsWith('L:') && levelOf(id)===curDom.slice(2)) || (curDom.startsWith('G:') && groupOf_(id)===curDom.slice(2));
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none',2600); }
 
 /* ---------------- Calendar: 1 Oct → today ---------------- */
@@ -604,7 +603,7 @@ const BRAND = 'AdmitConnect', OFFER = '₹5,000';
 const PARENT_FIRST = ['Lakshmi','Ramesh','Suresh','Anitha','Mahesh','Kavitha','Prakash','Shobha','Venkatesh','Geetha','Rajesh','Usha'];
 // Mock parent name, derived from the candidate ID (no change to the rest of the mock data)
 const parentName = c => PARENT_FIRST[(+c.id.slice(1)) % PARENT_FIRST.length] + ' ' + c.name.split(' ').slice(-1)[0];
-const offerWhere = d => levelOf(d)==='pu' ? 'top Bangalore PU colleges with JEE / NEET coaching' : `top Bangalore ${shortDom(d)} colleges`;
+const offerWhere = d => groupOf_(d)==='pu_sci' ? 'top Bangalore PU colleges with JEE / NEET coaching' : `top Bangalore ${shortDom(d)} colleges`;
 const msgBody = (m, intro) => `Hi ${parentName(m.cand)},\n\n${intro}\n\nThrough ${BRAND}, you get ${OFFER} off the admission fee at ${offerWhere(m.domain)}. There is no catch and no extra charge for you.\n\nWant to see which colleges suit ${m.cand.name.split(' ')[0]}'s marks and goals?\n\nReply SHOW ME 👇`;
 const MTPL = {
   // Step 1 – first message: always the standard text (sent after an answered OR a missed call)
@@ -796,8 +795,12 @@ function renderSide(){
     LEVELS.map(l=>`<div class="dom lvlh ${act('L:'+l.id)}" title="${l.name}" onclick="sideDom('L:${l.id}')">
         <span class="car" onclick="event.stopPropagation();toggleLvl('${l.id}')">${openLv[l.id]?'▾':'▸'}</span><span class="ic">${l.ic}</span><b>${l.name}</b>
         <span class="ct">${cnt(c=>levelOf(c.domain)===l.id)}</span></div>` +
-      (openLv[l.id] ? COURSES.filter(d=>d.lv===l.id).map(d=>`<div class="dom sub ${act(d.id)}" title="${d.name}" onclick="sideDom('${d.id}')">
-        <span class="ic">${d.ic}</span>${d.name}<span class="ct">${cnt(c=>c.domain===d.id)}</span></div>`).join('') : '')).join('');
+      (openLv[l.id] ? (()=>{ let seen={}; return COURSES.filter(d=>d.lv===l.id).map(d=>{
+        let h='';
+        if (d.grp && !seen[d.grp]){ seen[d.grp]=1; const g=GROUPS[d.grp];
+          h = `<div class="dom sub grph ${act('G:'+d.grp)}" title="${g.full}" onclick="sideDom('G:${d.grp}')"><span class="ic">${g.ic}</span><b>${g.name}</b><span class="ct">${cnt(c=>groupOf_(c.domain)===d.grp)}</span></div>`; }
+        return h + `<div class="dom sub ${d.grp?'sub2':''} ${act(d.id)}" title="${domName(d.id)}" onclick="sideDom('${d.id}')">
+        <span class="ic">${d.ic}</span>${d.name}<span class="ct">${cnt(c=>c.domain===d.id)}</span></div>`; }).join(''); })() : '')).join('');
   document.getElementById('adminNav').innerHTML = isAdmin ? `<div class="admbox"><div class="sec">🔒 ${T('admin')}</div>
     ${ADMIN_VIEWS.map(a=>`<div class="dom ${curView===a.id?'active':''}" title="${T(a.k)}" onclick="setView('${a.id}')"><span class="ic">${a.ic}</span>${T(a.k)}</div>`).join('')}</div>` : '';
 }
@@ -1259,7 +1262,7 @@ function openCall(id){
     if (c.dur>T_LVL) ev.push([T_LVL,'Level menu: '+LEVELS.map(l=>l.key+' '+l.name.split(' (')[0]).join(', ')]);
     if (c.chosenDom){ const L=LEVELS.find(l=>l.id===levelOf(c.chosenDom));
       ev.push([T_LVL+5,'Pressed '+L.key+' – '+L.name,'k']);
-      ev.push([T_DOM,'Course menu: '+COURSES.filter(d=>d.lv===L.id).map(d=>d.key+' '+d.short).join(', ')]);
+      ev.push([T_DOM,'Course menu: '+COURSES.filter(d=>d.lv===L.id).map(d=>d.key+' '+(d.grp?GROUPS[d.grp].name+' – ':'')+d.name).join(', ')]);
       ev.push([T_DOM+7,'Pressed '+DOMAINS.find(d=>d.id===c.chosenDom).key+' – '+DOMAINS.find(d=>d.id===c.chosenDom).name,'k']); }
     if (c.dur>T_COL && c.chosenDom) ev.push([T_COL,'Top colleges for '+shortDom(c.chosenDom)+' explained']);
     if (c.dur>MENU_AT) ev.push([MENU_AT,'Interest menu: 1 / 2 / 3 / 0 (9 to repeat)']);
@@ -1353,7 +1356,7 @@ function renderAnalytics(v){
   const rev = L.filter(c=>c.reverted), joined = L.filter(c=>c.admission==='Joined'), inproc = L.filter(c=>c.admission==='In process');
   const avg = ans.length ? ans.reduce((s,c)=>s+c.dur,0)/ans.length : 0;
   v.innerHTML = `
-  <div class="filters"><select onchange="setDom(this.value)"><option value="all">All courses</option>${LEVELS.map(l=>`<optgroup label="${l.name}"><option value="L:${l.id}" ${curDom==='L:'+l.id?'selected':''}>All ${l.name.split(' (')[0]}</option>${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${curDom===d.id?'selected':''}>${d.name}</option>`).join('')}</optgroup>`).join('')}</select>
+  <div class="filters"><select onchange="setDom(this.value)"><option value="all">All courses</option>${LEVELS.map(l=>`<optgroup label="${l.name}"><option value="L:${l.id}" ${curDom==='L:'+l.id?'selected':''}>All ${l.name.split(' (')[0]}</option>${Object.entries(GROUPS).filter(([k,g])=>g.lv===l.id).map(([k,g])=>`<option value="G:${k}" ${curDom==='G:'+k?'selected':''}>All ${g.full}</option>`).join('')}${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${curDom===d.id?'selected':''}>${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</option>`).join('')}</optgroup>`).join('')}</select>
     <select onchange="anaP=this.value;renderView()">
     ${[['14d','Last 14 days'],['tm','This month (Nov)'],['lm','Last month (Oct)'],['all','All time']].map(o=>`<option value="${o[0]}" ${anaP===o[0]?'selected':''}>📅 ${o[1]}</option>`).join('')}</select>
     <span class="muted">${fmtD(PD[0])} – ${fmtD(PD[PD.length-1])} 2026</span></div>
@@ -1439,7 +1442,7 @@ function renderSeats(v){
   ${LEVELS.filter(l=>ds.some(d=>d.lv===l.id)).map(l=>`<div class="sect" style="margin-top:4px">${l.ic} ${l.name}</div><div class="dgrid">${ds.filter(d=>d.lv===l.id).map(d=>{
     const R = rows.filter(r=>r.domain===d.id), q=sum(R,'quota'), f=sum(R,'filled'), p=pct(f,q);
     return `<div class="card dcard ${curDom===d.id?'sel':''}" onclick="setDom('${curDom===d.id?'all':d.id}')">
-      <h3>${d.ic} ${d.name}</h3>
+      <h3>${d.ic} ${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</h3>
       <div class="row"><span class="muted">Colleges</span><b>${R.length}</b></div>
       <div class="row"><span class="muted">Full / Almost full / Open</span><b><span style="color:#dc2626">${R.filter(r=>r.st==='Full').length}</span> / <span style="color:#d97706">${R.filter(r=>r.st==='Almost full').length}</span> / <span style="color:#16a34a">${R.filter(r=>r.st==='Open').length}</span></b></div>
       <div class="row"><span class="muted">Total seats</span><b>${sum(R,'total').toLocaleString('en-IN')}</b></div>
@@ -1451,7 +1454,7 @@ function renderSeats(v){
         <div class="muted" style="font-size:12px;margin-top:3px">${COURSE_DB[d.id].updated?`${COURSE_DB[d.id].recs} records · updated ${dbWhen(d.id)}`:'Empty – upload a list to start calling'}</div></div>
         <button class="btn" onclick="event.stopPropagation();openUpload('${d.id}')">⬆ Upload</button></div></div>`;}).join('')}</div>`).join('')}
   <div class="card" style="margin-bottom:16px"><h3>Our seat quota by course <small>· filled vs remaining</small></h3><div class="ch"><canvas id="c7"></canvas></div></div>
-  <div class="filters"><select onchange="setDom(this.value)"><option value="all">All courses</option>${LEVELS.map(l=>`<optgroup label="${l.name}"><option value="L:${l.id}" ${curDom==='L:'+l.id?'selected':''}>All ${l.name.split(' (')[0]}</option>${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${curDom===d.id?'selected':''}>${d.name}</option>`).join('')}</optgroup>`).join('')}</select>
+  <div class="filters"><select onchange="setDom(this.value)"><option value="all">All courses</option>${LEVELS.map(l=>`<optgroup label="${l.name}"><option value="L:${l.id}" ${curDom==='L:'+l.id?'selected':''}>All ${l.name.split(' (')[0]}</option>${Object.entries(GROUPS).filter(([k,g])=>g.lv===l.id).map(([k,g])=>`<option value="G:${k}" ${curDom==='G:'+k?'selected':''}>All ${g.full}</option>`).join('')}${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${curDom===d.id?'selected':''}>${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</option>`).join('')}</optgroup>`).join('')}</select>
     <select id="sst" onchange="fillSeatRows()"><option value="any">All statuses</option><option>Full</option><option>Almost full</option><option>Open</option></select>
     <span class="muted" id="src"></span><span class="muted">· Click a college to see its seat chart</span></div>
   <div class="tw fit"><table>
@@ -1626,7 +1629,7 @@ function renderSettings(v){
     <div class="card"><h3>📘 Guide · Bot call flow <small>· ${mmss(SCRIPT_SEC)} message</small></h3><div class="tl">
       <div class="e"><span class="t">0:00</span>Greeting – "This call is to help students looking for college admissions…"</div>
       <div class="e k"><span class="t">${mmss(T_LANG)}</span>Step 1 · Choose language</div>
-      <div class="e k"><span class="t">${mmss(T_LVL)}</span>Step 2 · Choose level – PU / UG / PG</div>
+      <div class="e k"><span class="t">${mmss(T_LVL)}</span>Step 2 · Choose level – PU / Degree / Masters</div>
       <div class="e k"><span class="t">${mmss(T_DOM)}</span>Step 3 · Choose course within that level</div>
       <div class="e"><span class="t">${mmss(T_COL)}</span>Step 4 · Top colleges, fees & scholarships for that course</div>
       <div class="e k"><span class="t">${mmss(MENU_AT)}</span>Step 5 · Interest menu (1 / 2 / 3 / 0, 9 repeat)</div>
@@ -1636,7 +1639,7 @@ function renderSettings(v){
       <table><thead><tr><th>Menu</th><th>Keys</th></tr></thead><tbody>
         <tr><td><b>1 · Language</b></td><td>${LANGS.map(l=>`<b>${l.k}</b> ${l.n}`).join(' · ')}</td></tr>
         <tr><td><b>2 · Level</b></td><td>${LEVELS.map(l=>`<b>${l.key}</b> ${l.name}`).join(' · ')}</td></tr>
-        ${LEVELS.map(l=>`<tr><td><b>3 · Course</b><br><span class="muted">after ${l.key} (${l.name.split(' ')[0]})</span></td><td>${COURSES.filter(d=>d.lv===l.id).map(d=>`<b>${d.key}</b> ${d.name}`).join(' · ')}</td></tr>`).join('')}
+        ${LEVELS.map(l=>`<tr><td><b>3 · Course</b><br><span class="muted">after ${l.key} (${l.name.split(' ')[0]})</span></td><td>${COURSES.filter(d=>d.lv===l.id).map(d=>`<b>${d.key}</b> ${d.grp?GROUPS[d.grp].name+' – ':''}${d.name}`).join(' · ')}</td></tr>`).join('')}
         <tr><td><b>4 · Interest</b></td><td>${Object.entries(KEYS).map(([k,o])=>`<b>${k}</b> ${o.l}`).join('<br>')}</td></tr>
         <tr><td><b>Any time</b></td><td><b>8</b> Record a question for the counsellor<br><b>9</b> Repeat the current menu</td></tr>
       </tbody></table></div>
@@ -1656,7 +1659,7 @@ function renderSettings(v){
 // Upload a candidate list for ONE course (admin, Seats & colleges page)
 function openUpload(course){
   const sel = document.getElementById('upCourse');
-  sel.innerHTML = '<option value="">— choose a course —</option>' + LEVELS.map(l=>`<optgroup label="${l.name}">${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${d.id===course?'selected':''}>${d.name}</option>`).join('')}</optgroup>`).join('');
+  sel.innerHTML = '<option value="">— choose a course —</option>' + LEVELS.map(l=>`<optgroup label="${l.name}">${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${d.id===course?'selected':''}>${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</option>`).join('')}</optgroup>`).join('');
   document.getElementById('fileMsg').innerHTML=''; document.getElementById('file').value='';
   upInfo(); document.getElementById('upModal').classList.add('on');
 }
