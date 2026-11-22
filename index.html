@@ -303,7 +303,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:30 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:50 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -921,7 +921,7 @@ function renderView(){
   const v = document.getElementById('view');
   ({today:renderToday, log:renderCallTable, adm:renderAdmissions, cand:renderCandidates, msg:renderMessages,
     analytics:renderAnalytics, seats:renderSeats, settings:renderSettings, college:renderCollege})[curView](v);
-  if (curView==='settings' && isAdmin) loadAccounts();
+  if (curView==='settings' && isAdmin){ loadAccounts(); renderTransfer(); }
   fitTables();
 }
 // Make the main table fill the window down to the bottom (no empty gap, header stays sticky)
@@ -1692,6 +1692,7 @@ function renderSettings(v){
     </div><div style="margin-top:14px"><button class="btn pri" onclick="toast('Settings saved (demo only)')">Save settings</button></div></div>
 
     <div class="card mini"><div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0">👥 Users &amp; roles <small>· real accounts · one admin · created by the admin only</small></h3><span class="sp"></span><button class="btn pri" onclick="openAddUser()">➕ Add user</button></div><div id="acctList" class="muted" style="margin-top:10px">Loading…</div></div>
+    <div class="card mini"><h3>🔁 Transfer admin role <small>· there is only one admin</small></h3><div class="muted" style="font-size:13px;margin-bottom:8px">Hand the admin role to another user (e.g. when the owner changes). You become a Counsellor. No backend work needed.</div><div id="xferBox">Loading…</div></div>
     <div class="card"><h3>🏫 College partner access</h3><div class="set">
       <div style="grid-column:1/-1"><label>College shown in the College partner view (demo)</label><select onchange="myCollege=this.value;toast('College partner view will show '+this.value)">${collegeOptions(myCollege)}</select></div>
     </div><div class="muted" style="font-size:12px;margin-top:8px">A live system gives each college its own login that only shows its own seats.</div></div>`:''}
@@ -1868,6 +1869,7 @@ function renderAuth(mode, msg, isErr){
   const note = (m,err)=> m?`<div class="note" style="margin:0 0 12px;${err?'background:#fef2f2;color:#991b1b':'background:#ecfdf5;color:#065f46'}">${m}</div>`:'';
   let body = '';
   if (authMode==='login') body = `
+      <div id="setupLink"></div>
       <h2 style="margin:0 0 14px;font-size:20px">Log in</h2>${note(msg,isErr)}
       <form onsubmit="event.preventDefault();doLogin()">
         <div class="afield"><label>${sb?'Email ID':'Email or phone number'}</label><input id="lId" autocomplete="username" placeholder="${sb?'name@example.com':'name@example.com or 98XXXXXXXX'}"></div>
@@ -1889,6 +1891,19 @@ function renderAuth(mode, msg, isErr){
         <div class="aerr" id="fErr"></div>
         <button class="abtn" type="submit" id="fBtn">Email me a set-password link</button></form>`:''}
       <div style="text-align:center;font-size:13px;margin-top:12px"><span class="alink" onclick="renderAuth('login')">← Back to log in</span></div>`;
+  else if (authMode==='setup') body = `
+      <h2 style="margin:0 0 6px;font-size:20px">🛠 First-time setup</h2>
+      <div class="muted" style="font-size:13px;margin-bottom:14px">No admin exists yet. Create the <b>one</b> admin account for AdmitConnect. ${sb?'You need the <b>setup code</b> chosen when the system was installed. You will get an email to set your password.':'Offline demo: the admin is saved in this browser.'}</div>${note(msg,isErr)}
+      <form onsubmit="event.preventDefault();doSetup()">
+        <div class="afield"><label>Full name</label><input id="uName" autocomplete="name" placeholder="e.g. Anush G N"></div>
+        <div class="afield"><label>Email ID</label><input id="uEmail" type="email" autocomplete="email" placeholder="name@example.com"></div>
+        <div class="afield"><label>Phone number</label><input id="uPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"></div>
+        ${sb?`<div class="afield"><label>Setup code</label><input id="uCode" type="password" autocomplete="off" placeholder="One-time code from installation"></div>`
+            :`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="afield"><label>Password</label><input id="uPw" type="password" autocomplete="new-password" placeholder="Min 8, letters + numbers"></div>
+              <div class="afield"><label>Confirm password</label><input id="uPw2" type="password" autocomplete="new-password"></div></div>`}
+        <div class="aerr" id="uErr"></div>
+        <button class="abtn" type="submit" id="uBtn">Create admin account</button></form>
+      <div style="text-align:center;font-size:13px;margin-top:12px"><span class="alink" onclick="renderAuth('login')">← Back to log in</span></div>`;
   else if (authMode==='setpw') body = `
       <h2 style="margin:0 0 6px;font-size:20px">Set your password</h2>
       <div class="muted" style="font-size:13px;margin-bottom:14px">${msg||'Create the password you will use to log in from now on.'}</div>
@@ -1908,6 +1923,71 @@ function renderAuth(mode, msg, isErr){
     </div></div>`;
   const vs = document.getElementById('verStamp'); if (vs) document.getElementById('verStampA').textContent = vs.textContent;
   document.getElementById('auth').classList.add('on');
+  if (authMode==='login') checkSetupNeeded();
+}
+/* ---------- First-run setup: create the one admin from the website ---------- */
+let setupNeeded = null;
+async function checkSetupNeeded(){
+  if (setupNeeded===null){
+    if (!sb) setupNeeded = !getUsers().some(u=>u.role==='admin');
+    else { try { const { data, error } = await sb.functions.invoke('admin-setup', { body:{ action:'status' } });
+                 setupNeeded = !error && data && data.needs_setup === true; } catch(e){ setupNeeded = false; } }
+  }
+  const el = document.getElementById('setupLink');
+  if (el) el.innerHTML = setupNeeded ? `<div class="note" style="margin:0 0 14px;background:#eef2ff;color:#3730a3">No admin has been set up yet. <span class="alink" onclick="renderAuth('setup')"><b>🛠 First-time setup – create the admin account →</b></span></div>` : '';
+}
+async function doSetup(){
+  const v = id => (document.getElementById(id)||{value:''}).value.trim(), err = m => (document.getElementById('uErr').textContent = m, false);
+  const name=v('uName'), email=v('uEmail').toLowerCase(), phone=v('uPhone').replace(/\D/g,'');
+  if (name.length<2) return err('Please enter your full name.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return err('Please enter a valid email ID.');
+  if (!/^[6-9]\d{9}$/.test(phone)) return err('Phone must be a 10-digit Indian mobile number (starts with 6–9).');
+  if (!sb){
+    const pw=document.getElementById('uPw').value, pw2=document.getElementById('uPw2').value;
+    if (!pwOk(pw)) return err('Password must be at least 8 characters with letters and numbers.');
+    if (pw!==pw2) return err('The two passwords do not match.');
+    const users = getUsers(); if (users.some(u=>u.role==='admin')) return err('An admin already exists.');
+    const u = {id:'ADM-001', name, email, phone, role:'admin', pw: await hashPw(pw), created:new Date().toISOString()};
+    users.push(u); saveUsers(users); setupNeeded = false; store.set('session',{uid:u.id}); startSession(u); toast('Admin account created'); return;
+  }
+  const code = v('uCode'); if (!code) return err('Please enter the setup code.');
+  busy('uBtn', true, 'Creating…');
+  try {
+    const { data, error } = await sb.functions.invoke('admin-setup', { body:{ action:'create_admin', full_name:name, email, phone, setup_code:code, redirect_to: location.origin + location.pathname } });
+    if (error){ let m = error.message; try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch(e){} return err(m); }
+    setupNeeded = false;
+    renderAuth('login', `✔ Admin account created for <b>${esc(name)}</b>. Check <b>${esc(email)}</b> for the link to set your password, then log in.`);
+  } catch(e){ err('Network problem – please try again.'); }
+  finally { busy('uBtn', false, 'Create admin account'); }
+}
+/* ---------- Hand the admin role to another user ---------- */
+let xferArm = null;
+async function transferAdmin(){
+  const to = document.getElementById('xferTo').value, out = document.getElementById('xferOut');
+  if (!to){ out.textContent = 'Choose the new admin first.'; return; }
+  if (xferArm !== to){ xferArm = to; out.innerHTML = '<b style="color:#b45309">Press "Transfer" again to confirm. You will become a Counsellor.</b>'; return; }
+  xferArm = null;
+  if (!sb){
+    const users = getUsers(), me = users.find(u=>u.id===profile.id), them = users.find(u=>u.id===to);
+    if (!me || !them){ out.textContent = 'Only browser accounts can be transferred in the offline copy.'; return; }
+    me.role = 'counsellor'; them.role = 'admin'; saveUsers(users); toast('Admin role transferred to '+them.name); startSession(me); return;
+  }
+  const { data, error } = await sb.functions.invoke('admin-setup', { body:{ action:'transfer', to_user_id: to } });
+  if (error){ let m = error.message; try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch(e){} out.textContent = 'Transfer failed: '+m; return; }
+  toast('Admin role transferred to '+data.new_admin);
+  const { data: s2 } = await sb.auth.getSession(); if (s2 && s2.session) await enterWithSupabaseUser(s2.session.user);
+}
+async function renderTransfer(){
+  const el = document.getElementById('xferBox'); if (!el) return;
+  let opts = [];
+  if (sb && isDbAdmin()){
+    const { data } = await sb.from('profiles').select('id,full_name,role,approved').neq('role','admin').eq('approved', true).order('full_name');
+    opts = (data||[]).map(u=>[u.id, u.full_name+' ('+u.role+')']);
+  } else if (!sb){ opts = getUsers().filter(u=>u.role!=='admin').map(u=>[u.id, u.name+' ('+u.role+')']); }
+  else { el.innerHTML = '<div class="muted" style="font-size:13px">Log in with the real admin account to transfer the role.</div>'; return; }
+  el.innerHTML = opts.length ? `<div class="set"><div><label>New admin</label><select id="xferTo"><option value="">— choose a user —</option>${opts.map(([i,l])=>`<option value="${i}">${esc(l)}</option>`).join('')}</select></div>
+     <div style="display:flex;align-items:flex-end"><button class="btn" onclick="transferAdmin()">🔁 Transfer</button></div></div><div id="xferOut" class="muted" style="font-size:12px;margin-top:6px"></div>`
+   : '<div class="muted" style="font-size:13px">Add the person first (➕ Add user). They can then receive the admin role here.</div>';
 }
 const pwOk = pw => pw.length>=8 && /[A-Za-z]/.test(pw) && /\d/.test(pw);
 let pendingLocal = null;   // offline: user who must replace a temporary password
