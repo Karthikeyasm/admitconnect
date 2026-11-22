@@ -295,7 +295,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 15:40 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 16:30 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -311,6 +311,7 @@ aside{position:sticky}
         <option value="en">🌐 EN</option><option value="ta">🌐 தமிழ்</option><option value="hi">🌐 हिन्दी</option></select>
       <select class="lsel" id="colSel" onchange="setCollege(this.value)" title="Demo: which college is logged in" style="display:none;max-width:260px"></select>
       <select class="lsel" id="roleSel" onchange="setRole(this.value)" title="Demo: view the app as this role"></select>
+      <span class="pill" id="modeBadge" style="display:none;background:#fef3c7;color:#92400e;padding:6px 10px" title="Set by the admin in Settings › Calling mode"></span>
       <button class="btn pri" id="campBtn" onclick="startCampaign()" title="Start / pause today's bot-call campaign"></button>
     </div>
     <div class="tabbar" id="tabbar">
@@ -360,6 +361,7 @@ aside{position:sticky}
 <!-- College seat modal -->
 <div class="modal" id="seatModal" onclick="if(event.target===this)closeSeat()"><div class="mbox" id="seatBox"></div></div>
 
+<div class="modal" id="mcModal" onclick="if(event.target===this)this.classList.remove('on')"><div class="mbox" id="mcBox"></div></div>
 <div class="auth" id="auth"></div>
 <!-- Supabase client (login + database). If it cannot load, the page falls back to offline demo accounts. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -758,11 +760,32 @@ let role = 'admin';   // demo roles: 'admin' | 'counsellor' | 'college'  (a live
 const ROLES = [['admin','admin_role','🛡'],['counsellor','couns_role','🎧'],['college','college_role','🏫']];
 // College shown in the college-partner view (demo default: the college with most joins this campaign)
 let myCollege = COLLEGE_LIST.map(c=>[c.name, calls.filter(x=>x.admission==='Joined'&&x.college===c.name).length]).sort((a,b)=>b[1]-a[1])[0][0];
+/* ---------- Calling mode per counsellor (set by admin) ----------
+   auto   = bot calls one by one and records everything
+   manual = counsellor calls from own phone and fills in the result */
+const MOCK_COUNSELLORS = [{id:'CN-014', name:'Ananya (Counsellor 1)'}, {id:'CN-015', name:'Rohit (Counsellor 2)'}];
+let callModes = {'CN-014':'auto', 'CN-015':'manual'};   // loaded from browser storage at start-up
+let defaultMode = 'auto';
+let actingC = 'CN-014';                      // counsellor currently being viewed / logged in
+const counsellors = () => [...MOCK_COUNSELLORS, ...getUsers().filter(u=>u.role==='counsellor').map(u=>({id:u.id, name:u.name}))];
+const cName = id => (counsellors().find(c=>c.id===id)||{name:id}).name;
+const modeOf = id => callModes[id] || defaultMode;
+// 'both' for admin (full access), 'auto' / 'manual' for a counsellor, null for college
+const myMode = () => role==='admin' ? 'both' : role==='counsellor' ? modeOf(actingC) : null;
+const canManual = () => myMode()==='both' || myMode()==='manual';
+const canAuto   = () => myMode()==='both' || myMode()==='auto';
+function setMode(id, m){ callModes[id]=m; store.set('callModes', callModes); toast(cName(id)+': '+(m==='auto'?'🤖 Automatic':'✍ Manual')+' calling'); renderAll(); }
+const MODE_LBL = {auto:'🤖 Automatic', manual:'✍ Manual'};
+// role drop-down: Admin, each counsellor (with mode), College
+const roleOptions = short => [`<option value="admin" ${role==='admin'?'selected':''}>🛡 ${short?'Admin':T('admin_role')}</option>`,
+  ...counsellors().map(c=>`<option value="counsellor:${c.id}" ${role==='counsellor'&&actingC===c.id?'selected':''}>🎧 ${c.name.replace(/ \(Counsellor \d\)/,'')} · ${modeOf(c.id)==='auto'?'🤖':'✍'}</option>`),
+  `<option value="college" ${role==='college'?'selected':''}>🏫 ${short?'College':T('college_role')}</option>`].join('');
 function setRole(r, quiet){
+  if (r.startsWith('counsellor:')){ actingC = r.split(':')[1]; r = 'counsellor'; }
   role = r; isAdmin = r==='admin';
   if (r==='college') curView = 'college';
   else if (curView==='college' || (!isAdmin && ADMIN_VIEWS.some(a=>a.id===curView))) curView = 'today';
-  if (!quiet) toast({admin:'Administrator: full access', counsellor:'Counsellor: calls, candidates and basic settings', college:'College partner: own seat dashboard only'}[r]);
+  if (!quiet) toast({admin:'Administrator: full access (automatic + manual)', counsellor:cName(actingC)+' – '+MODE_LBL[modeOf(actingC)]+' calling', college:'College partner: own seat dashboard only'}[r]);
   renderAll();
 }
 function setCollege(n){ myCollege = n; renderAll(); }
@@ -811,7 +834,7 @@ function renderSide(){
   const navItem = (v,ic,label)=>`<div class="dom ${curView===v?'active':''}" title="${label}" onclick="setView('${v}')"><span class="ic">${ic}</span>${label}</div>`;
   document.getElementById('commonNav').innerHTML = `<div class="admbox">${isCol?navItem('college','🏫',T('college_dash')):''}${navItem('settings','⚙',T('settings'))}</div>`;
   const roleLbl = T(ROLES.find(r=>r[0]===role)[1]);
-  document.getElementById('who').innerHTML = `<div class="who">👤 <b>${profile.name||'Your name'}</b>${roleLbl}${isCol?' · '+myCollege:' · '+profile.id}
+  document.getElementById('who').innerHTML = `<div class="who">👤 <b>${role==='counsellor'&&MOCK_COUNSELLORS.some(c=>c.id===actingC)?cName(actingC)+' (preview)':profile.name||'Your name'}</b>${roleLbl}${role==='counsellor'?' · '+MODE_LBL[modeOf(actingC)]:''}${isCol?' · '+myCollege:' · '+profile.id}
     ${profile.email?`<div style="font-size:11px;margin-top:2px">${profile.email}</div>`:''}<button class="logout" onclick="logout()" title="Log out">⎋ Log out</button></div>`;
   if (isCol){ document.getElementById('adminNav').innerHTML=''; return; }
   document.getElementById('secDom').textContent = T('domains');
@@ -833,13 +856,16 @@ function renderSide(){
 }
 function renderTop(){
   const rs = document.getElementById('roleSel');
-  rs.innerHTML = ROLES.map(([id,k,ic])=>`<option value="${id}" ${role===id?'selected':''}>${ic} ${T(k).replace('Administrator','Admin').replace('College partner','College')}</option>`).join('');
+  rs.innerHTML = roleOptions(true);
+  const mb = document.getElementById('modeBadge');
+  mb.style.display = role==='counsellor' && !isAdminView() ? '' : 'none';
+  mb.innerHTML = role==='counsellor' ? MODE_LBL[modeOf(actingC)]+' calling' : '';
   const cs = document.getElementById('colSel');
   cs.style.display = role==='college' ? '' : 'none';
   if (role==='college') cs.innerHTML = collegeOptions(myCollege);
   const isCol = role==='college';
   // Start only where calls happen (main tabs); hidden on Admin pages, Settings and the college view
-  document.getElementById('campBtn').style.display = (isCol || isAdminView()) ? 'none' : '';
+  document.getElementById('campBtn').style.display = (isCol || isAdminView() || !canAuto()) ? 'none' : '';
   document.getElementById('langSel').value = lang;
   updateCampBtn();
 }
@@ -898,10 +924,12 @@ const cid = c => idChip(c.id, 'called');
 const lvlBars = l => `<span class="lvl">${[0,1,2].map(i=>`<b style="background:${l!==null&&l>i?LVL[l].c:'#e5e7eb'}"></b>`).join('')}</span>`;
 const legend = () => `<div class="legend"><b style="color:var(--ink)">ID:</b>${Object.values(CK).map(k=>`<span><i style="background:${k.c}"></i>${k.l}</span>`).join('')}</div>`;
 function interestCell(c){
+  if (c && c.manual && c.lvl!==null) return `${lvlBars(c.lvl)}✍ <span style="color:${LVL[c.lvl].c}">${LVL[c.lvl].l}</span>`;
   if (!c || c.key===null) return `<span class="muted">${c && c.dur?'No key pressed':'—'}</span>`;
   return `${lvlBars(c.lvl)}<b>Key ${c.key}</b> · <span style="color:${LVL[c.lvl].c}">${LVL[c.lvl].l}</span>`;
 }
 function listenCell(c){
+  if (c.manual) return c.dur ? `✍ ${mmss(c.dur)} <span class="muted">talk time</span>` : '<span class="muted">—</span>';
   if (!c.dur) return `<span class="muted">0:00 (rang ${c.ring}s)</span>`;
   return `<span class="bar"><i style="width:${pct(c.dur,SCRIPT_SEC)}%;background:${c.completed?'#16a34a':'#ca8a04'}"></i></span>${mmss(c.dur)} <span class="muted">/ ${mmss(SCRIPT_SEC)}</span>`;
 }
@@ -960,19 +988,21 @@ function renderToday(v){
     <span class="legend" style="margin:0;flex-shrink:0">${Object.values(CK).map(k=>`<span><i style="background:${k.c}"></i>${k.l.replace('In queue','Queue').replace('Calling now','Calling')}</span>`).join('')}</span>
   </div>
   <div class="tw fit"><table style="min-width:900px">
-    <thead><tr><th>#</th><th>Call ID</th><th>Candidate</th><th>Course</th><th>Language</th><th>Type</th><th>Call status</th><th>Message</th><th>Listened</th><th>Interest (IVR key)</th></tr></thead>
+    <thead><tr><th>#</th><th>Call ID</th>${canManual()?'<th>Action</th>':''}<th>Candidate</th><th>Course</th><th>Language</th><th>Type</th><th>Call status</th><th>Message</th><th>Listened</th><th>Interest</th></tr></thead>
     <tbody>${rows.map(q=>{ const c=q.call, i=Q.indexOf(q), m=msgOf(q);
       const idc = q.state==='queued' ? idChip('Queued','queued') : q.state==='calling' ? idChip('Calling…','calling') : cid(c);
       const st = q.state==='queued' ? '<span class="pill" style="background:#f1f5f9;color:#64748b">⏳ In queue</span>'
-               : q.state==='calling' ? '<span class="pill" style="background:#dbeafe;color:#1d4ed8"><span class="live"></span>Calling…</span>' : statusPill(c.status);
+               : q.state==='calling' ? '<span class="pill" style="background:#dbeafe;color:#1d4ed8"><span class="live"></span>Calling…</span>' : statusPill(c.status)+(c.manual?' <span class="pill" style="background:#fef3c7;color:#92400e">✍</span>':'');
       return `<tr ${c?`onclick="openCall('${c.id}')"`:'style="cursor:default"'}>
         <td class="muted">${i+1}</td><td>${idc}</td>
+${canManual()?`<td>${q.state==='queued'?`<button class="btn pri" style="padding:4px 10px;font-size:12px" onclick="event.stopPropagation();openManual(${i})">📞 Log call</button>`:c&&canEdit(c)?`<button class="btn" style="padding:4px 10px;font-size:12px" onclick="event.stopPropagation();openManual(null,'${c.id}')">✎ Edit</button>`:''}</td>`:''}
         <td><b>${q.cand.name}</b><div class="muted" style="font-size:12px">${q.cand.masked}</div></td>
         <td>${shortDom(c?c.domain:q.cand.domain)}</td><td>${c&&c.lang?c.lang:'<span class="muted">'+q.cand.lang+'</span>'}</td>
         <td>${q.kind==='Retry'?'<span class="pill" style="background:#fef3c7;color:#92400e">Retry #'+q.attempt+'</span>':'<span class="pill" style="background:#e0e7ff;color:#3730a3">New</span>'}</td>
         <td>${st}</td><td>${m ? mstatusPill(m.status)+(m.resp?' '+(m.resp.type==='link'?'🔗':'💬'):'') : '<span class="muted">—</span>'}</td>
-        <td>${c?listenCell(c):'<span class="muted">—</span>'}</td><td>${c?interestCell(c):'<span class="muted">—</span>'}</td></tr>`;}).join('') ||
-      '<tr><td colspan="10" class="muted" style="text-align:center;padding:30px">No candidates match</td></tr>'}
+        <td>${c?listenCell(c):'<span class="muted">—</span>'}</td><td>${c?interestCell(c):'<span class="muted">—</span>'}</td>
+</tr>`;}).join('') ||
+      '<tr><td colspan="11" class="muted" style="text-align:center;padding:30px">No candidates match</td></tr>'}
     </tbody></table></div>`;
 }
 
@@ -983,7 +1013,7 @@ const DATE_OPTS = [['today','Today'],['yday','Yesterday'],['7d','Last 7 days'],[
 const GROUP_OPTS = [['recency','Recent → older'],['day','By day'],['month','By month'],['none','No grouping']];
 // value helpers used by the column filters
 const listenBucket = c => !c || !c.dur ? 'Not connected' : c.completed ? 'Full message' : c.dur<30 ? 'Under 30 s' : c.dur<60 ? '30 s – 1 min' : '1 – 2 min';
-const callIntLabel = c => c && c.key!==null ? `Key ${c.key} · ${LVL[c.lvl].l}` : c && c.dur ? 'No key pressed' : 'Not reached';
+const callIntLabel = c => c && c.manual && c.lvl!==null ? '✍ '+LVL[c.lvl].l : c && c.key!==null ? `Key ${c.key} · ${LVL[c.lvl].l}` : c && c.dur ? 'No key pressed' : 'Not reached';
 const msgIntLabel  = m => m.resp ? (m.resp.type==='link'?'🔗 Clicked link':'💬 Replied')+' · '+LVL[m.resp.lvl].l : m.status==='delivered' ? 'Not opened' : 'No response';
 const revLabel     = c => c.reverted ? c.revertVia : 'No';
 const scoreBucket  = v => v<70 ? 'Under 70%' : v<80 ? '70 – 80%' : v<90 ? '80 – 90%' : '90% and above';
@@ -996,7 +1026,7 @@ const candS  = {q:'', cf:{}};
 const FILTERS = {
   today:[ T_('cid','Call ID',q=>q.call?q.call.id:''), T_('cand','Candidate (name / phone)',q=>q.cand.name+' '+q.cand.phone),
     S_('course','Course',q=>shortDom(q.call?q.call.domain:q.cand.domain)), S_('lang','Language',q=>(q.call&&q.call.lang)||q.cand.lang),
-    S_('kind','Type',q=>q.kind==='Retry'?'Retry #'+q.attempt:'New'),
+    S_('kind','Type',q=>q.kind==='Retry'?'Retry #'+q.attempt:'New'), S_('mode','Mode',q=>q.call?(q.call.manual?'✍ Manual':'🤖 Bot'):'Not called yet'),
     S_('cstat','Call status',q=>q.state==='queued'?'In queue':q.state==='calling'?'Calling':STATUS[q.call.status].l),
     S_('mstat','Message',q=>{ const m=q.call&&msgs.find(x=>x.call===q.call); return m?MSTATUS[m.status].l:'No message'; }),
     S_('listen','Listened',q=>listenBucket(q.call)), S_('int','Interest (IVR key)',q=>callIntLabel(q.call)) ],
@@ -1004,7 +1034,7 @@ const FILTERS = {
     D_('📅 Date & time',c=>c.date), S_('att','Attempt',c=>'#'+c.attempt), S_('stat','Status',c=>STATUS[c.status].l), S_('listen','Listened',listenBucket),
     S_('int','Interest (IVR key)',callIntLabel), S_('rev','Reverted back',revLabel), S_('adm','Admission',c=>c.admission),
     S_('col','Joined college',c=>c.admission==='Joined'?c.college:'—'), T_('rcpt','Receipt / Txn ID',c=>(c.receipt||'')+' '+(c.txn||'')),
-    S_('lang','Language chosen',c=>c.lang||'—'), G_ ],
+    S_('lang','Language chosen',c=>c.lang||'—'), S_('mode','Mode',c=>c.manual?'✍ Manual':'🤖 Bot'), S_('by','Logged by',c=>c.manual?(c.by||'—'):'Bot'), G_ ],
   adm:[ T_('aid','Admission ID',c=>c.admId), T_('cand','Candidate (name / phone)',c=>c.cand.name+' '+c.cand.phone), S_('course','Course',c=>shortDom(c.domain)),
     S_('stat','Status',c=>c.admission), S_('src','Source',admSource), T_('cid','Call ID',c=>c.id), T_('mid','Message ID',c=>{ const m=admMsg(c); return m?m.id:''; }),
     S_('int','Interest shown',c=>{ const m=admMsg(c); return m && (c.lvl===null || m.resp.lvl>c.lvl) ? msgIntLabel(m) : callIntLabel(c); }),
@@ -1131,7 +1161,7 @@ function fillRows(){
       <td>${cid(c)}</td>
       <td><b>${c.cand.name}</b><div class="muted" style="font-size:12px">${c.cand.masked}</div></td>
       <td>${shortDom(c.domain)}</td><td>${fmtD(c.date)}, ${c.time}</td><td>#${c.attempt}</td>
-      <td>${statusPill(c.status)}</td><td>${listenCell(c)}</td><td>${interestCell(c)}</td>
+      <td>${statusPill(c.status)}${c.manual?' <span class="pill" style="background:#fef3c7;color:#92400e" title="Logged manually by '+(c.by||'counsellor')+'">✍</span>':''}</td><td>${listenCell(c)}</td><td>${interestCell(c)}</td>
       <td>${c.reverted?`<b style="color:#16a34a">✔</b> ${c.revertVia}`:'<span class="muted">No</span>'}</td>
       <td>${admPill(c.admission)}</td><td>${evidenceCell(c)}</td></tr>`).join('');
   }).join('') || `<tr><td colspan="11" class="muted" style="text-align:center;padding:30px">No calls match these filters</td></tr>`;
@@ -1280,7 +1310,10 @@ function openMsg(id){
 function openCall(id){
   const c = calls.find(x=>x.id===id); if(!c) return;
   const ev = [];
-  if (c.status==='not_picked') ev.push([0,'Dialled – rang for '+c.ring+'s, no answer','end']);
+  if (c.manual){
+    ev.push([0,'✍ Call logged manually by '+(c.by||'counsellor')+' · '+STATUS[c.status].l,'k']);
+    if (c.dur) ev.push([c.dur,'Talk time '+mmss(c.dur)+(c.lvl!==null?' · interest: '+LVL[c.lvl].l:''),'end']);
+  } else if (c.status==='not_picked') ev.push([0,'Dialled – rang for '+c.ring+'s, no answer','end']);
   else if (c.status==='rejected') ev.push([0,'Dialled – call rejected by candidate after '+Math.min(c.ring,8)+'s','end']);
   else {
     ev.push([0,'Call connected (rang '+c.ring+'s) – greeting & introduction']);
@@ -1301,7 +1334,8 @@ function openCall(id){
   }
   const hist = c.cand.calls.map(x=>`<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)">
     ${cid(x)}<span style="width:110px">${fmtD(x.date)}, ${x.time}</span>${statusPill(x.status)}<span class="muted" style="margin-left:auto">${x.dur?mmss(x.dur):'—'}</span></div>`).join('');
-  const msgs = (c.query ? `<div class="msg voice"><div class="mh">🎙 <b style="color:#be185d">Voice query (pressed 8)</b> · ${fmtD(c.date)}, ${c.time} · at ${mmss(c.query.at)} · ${c.query.len}s
+  const msgs = (c.query && c.query.manual ? `<div class="msg voice"><div class="mh">💬 <b style="color:#be185d">Candidate's message (noted by ${c.by||'counsellor'})</b> · ${fmtD(c.date)}, ${c.time}</div><q>${esc(c.query.text)}</q></div>` : '')
+    + (c.query && !c.query.manual ? `<div class="msg voice"><div class="mh">🎙 <b style="color:#be185d">Voice query (pressed 8)</b> · ${fmtD(c.date)}, ${c.time} · at ${mmss(c.query.at)} · ${c.query.len}s
        <span class="pill" style="background:#fff;color:#be185d;border:1px solid #fbcfe8">${c.query.tag}</span></div>
        <q>${c.query.text}</q><button class="play" onclick="toast('Audio playback: placeholder (Phase 2)')">▶ Play recording</button>
        <span class="muted" style="font-size:12px;margin-left:8px">Transcript is auto-generated (mock)</span></div>` : '')
@@ -1309,7 +1343,7 @@ function openCall(id){
     || '<div class="muted">No message or query from the candidate.</div>';
   document.getElementById('drawer').innerHTML = `
   <div class="dh"><div><div class="muted" style="font-size:12px">${cid(c)} · Attempt #${c.attempt}</div><h2 style="margin-top:6px">${c.cand.name}</h2>
-    <div class="muted">${c.cand.masked} · ${c.cand.city}</div><div style="margin-top:8px">${statusPill(c.status)} ${admPill(c.admission)}</div></div>
+    <div class="muted">${c.cand.masked} · ${c.cand.city}</div><div style="margin-top:8px">${statusPill(c.status)} ${admPill(c.admission)} ${c.manual?`<span class="pill" style="background:#fef3c7;color:#92400e">✍ Manual · ${c.by||''}</span>`:'<span class="pill" style="background:#e0e7ff;color:#3730a3">🤖 Bot call</span>'}</div></div>
     <button class="x" onclick="closeDrawer()">×</button></div>
   <div class="db">
     <div class="kv">
@@ -1351,8 +1385,10 @@ function openCall(id){
     <div class="sect">Messages sent to this candidate (${candMsgs(c.cand).length})</div>
     ${candMsgs(c.cand).map(x=>`<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer" onclick="openMsg('${x.id}')">
       ${idChip(x.id,'called')}<span style="width:105px">${fmtD(x.date)}, ${x.time}</span>${mstatusPill(x.status)}<span class="muted" style="margin-left:auto">${x.resp?msgInterestCell(x):x.channel}</span></div>`).join('') || '<div class="muted">No messages sent.</div>'}
-    <div style="display:flex;gap:8px;margin-top:16px">
-      <button class="btn pri" onclick="toast('Re-dial via bot: Phase 2')">📞 Call again</button>
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+      ${canEdit(c)?`<button class="btn pri" onclick="openManual(null,'${c.id}')">✎ Edit call details</button>`:''}
+      ${canManual()?`<button class="btn" onclick="openManual(null,null,'${c.cand.id}')">📞 Log a new manual call</button>`:''}
+      ${canAuto()?`<button class="btn" onclick="toast('Re-dial via bot: Phase 2')">🤖 Call again (bot)</button>`:''}
       <button class="btn" onclick="toast('WhatsApp follow-up: Phase 2')">💬 Send WhatsApp</button></div>
   </div>`;
   document.getElementById('drawer').classList.add('on'); document.getElementById('ov').classList.add('on');
@@ -1589,15 +1625,28 @@ function renderSettings(v){
   const inp = (k,l,ph)=>`<div><label>${l}</label><input value="${profile[k]||''}" placeholder="${ph||''}" oninput="setProf('${k}',this.value)"></div>`;
   v.innerHTML = `<div class="sgrid">
   <div>
+    ${isAdmin?`<div class="card"><h3>📞 Calling mode <small>· per counsellor</small></h3>
+      <div class="muted" style="font-size:13px;margin-bottom:10px"><b>🤖 Automatic</b> – the bot calls students one by one and records call time, keys pressed and voice queries.<br>
+        <b>✍ Manual</b> – the counsellor calls from their own phone and logs status, talk time, interest, the student's message and admission by hand.<br>Admins always have both.</div>
+      <div class="mini"><table><thead><tr><th>Counsellor</th><th>ID</th><th>Calling mode</th></tr></thead><tbody>
+        ${counsellors().map(c=>`<tr style="cursor:default"><td>${c.name}</td><td class="muted">${c.id}</td><td><select onchange="setMode('${c.id}',this.value)">
+          <option value="auto" ${modeOf(c.id)==='auto'?'selected':''}>🤖 Automatic</option><option value="manual" ${modeOf(c.id)==='manual'?'selected':''}>✍ Manual</option></select></td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="set" style="margin-top:10px"><div><label>Default for new counsellors</label><select onchange="defaultMode=this.value;store.set('defaultMode',defaultMode);toast('Default calling mode: '+MODE_LBL[defaultMode])">
+        <option value="auto" ${defaultMode==='auto'?'selected':''}>🤖 Automatic</option><option value="manual" ${defaultMode==='manual'?'selected':''}>✍ Manual</option></select></div>
+        <div><label>Preview a counsellor's view</label><select onchange="if(this.value)setRole(this.value)"><option value="">— choose —</option>${counsellors().map(c=>`<option value="counsellor:${c.id}">${c.name} (${MODE_LBL[modeOf(c.id)]})</option>`).join('')}</select></div></div></div>
+`:''}
     <div class="card"><h3>👤 My profile <small>· shown in the left panel</small></h3><div class="set">
       ${inp('name','Full name','e.g. Karthik S')}
-      <div><label>${T('role')} (demo switch)</label><select onchange="setRole(this.value)">${ROLES.map(([id,k,ic])=>`<option value="${id}" ${role===id?'selected':''}>${ic} ${T(k)}</option>`).join('')}</select></div>
+      <div><label>${T('role')} (demo switch)</label><select onchange="setRole(this.value)">${roleOptions(false)}</select></div>
       ${inp('email','Email','name@example.com')}
       ${inp('phone','Phone','+91 XXXXX XXXXX')}
       ${role==='college' ? `<div><label>College</label><select onchange="setCollege(this.value)">${collegeOptions(myCollege)}</select></div>` : inp('id','Employee ID','ADM-001')}
       ${role==='admin' ? inp('branch','Branch / Office','Chennai') : ''}
     </div><div class="muted" style="font-size:12px;margin-top:8px">Saved in this browser only (demo).</div></div>
 
+    ${role==='counsellor'?`<div class="card"><h3>📞 Your calling mode</h3><div style="font-size:15px"><b>${MODE_LBL[modeOf(actingC)]}</b> <span class="muted">– set by your admin</span></div>
+      <div class="muted" style="font-size:13px;margin-top:6px">${modeOf(actingC)==='auto'?'Press ▶ Start on Today\'s campaign; the bot calls and records everything.':'In Today\'s campaign, press 📞 Log call next to each student after you call them, and fill in the result.'}</div></div>`:''}
     <div class="card"><h3>🎨 Theme</h3><div class="themes">
       ${THEMES.map(([id,n,c])=>`<div class="th ${theme===id?'on':''}" onclick="setTheme('${id}')"><div class="sw2">${c.map(x=>`<span style="background:${x}"></span>`).join('')}</div>${n}</div>`).join('')}
     </div></div>
@@ -1612,7 +1661,7 @@ function renderSettings(v){
       <div><label>Keep call recordings for</label><select><option>90 days</option><option>180 days</option><option>1 year</option></select></div>`:''}
     </div></div>
 
-    ${isAdmin?`<div class="card"><h3>📞 Bot call settings</h3><div class="set">
+    ${isAdmin?`    <div class="card"><h3>📞 Bot call settings</h3><div class="set">
       <div style="grid-column:1/-1"><label>Languages offered on the call</label><div class="cbx">${LANGS.map(l=>`<label><input type="checkbox" checked> ${l.k} – ${l.n}</label>`).join('')}</div></div>
       <div><label>Default language (no key pressed)</label><select>${LANGS.map(l=>`<option>${l.n}</option>`).join('')}</select></div>
       <div><label>Calling hours</label><input value="09:30 – 18:30"></div>
@@ -1701,6 +1750,73 @@ function fileChosen(inp){
   upInfo(); if (curView==='seats') renderView();
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeDrawer(); closeSeat(); document.getElementById('upModal').classList.remove('on'); } });
+
+/* ================= Manual call logging ================= */
+// Admin can edit any call; a manual-mode counsellor can edit manual calls
+const canEdit = c => role==='admin' || (myMode()==='manual' && c.manual);
+let mcCtx = null;
+function openManual(qi, callId, candId){
+  const c = callId ? calls.find(x=>x.id===callId) : null;
+  const q = qi!==null && qi!==undefined ? todayStats(true).Q[qi] : null;
+  const cand = c ? c.cand : q ? q.cand : candidates.find(x=>x.id===candId);
+  mcCtx = {q, c, cand};
+  const v = (k,d)=> c ? (c[k]??d) : d;
+  const now = new Date(), tnow = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const opt = (arr,sel)=>arr.map(([val,l])=>`<option value="${val}" ${String(sel)===String(val)?'selected':''}>${l}</option>`).join('');
+  document.getElementById('mcBox').innerHTML = `
+    <div style="display:flex;align-items:center"><h2 style="margin:0;font-size:18px">${c?'✎ Edit call':'📞 Log manual call'}</h2><button class="x" onclick="document.getElementById('mcModal').classList.remove('on')">×</button></div>
+    <div class="muted" style="margin:4px 0 12px">${cand.name} · ${cand.masked} · ${domName(c?c.domain:cand.domain)}${c?' · '+c.id+(c.manual?'':' (bot call – admin edit)'):''}</div>
+    <div class="set">
+      <div><label>Call status</label><select id="mStatus">${opt(Object.entries(STATUS).map(([k,o])=>[k,o.l]), v('status','answered'))}</select></div>
+      <div><label>Time of call</label><input id="mTime" type="time" value="${v('time',tnow)}"></div>
+      <div><label>Talk time (minutes)</label><input id="mDur" type="number" min="0" step="0.5" value="${c&&c.dur?(c.dur/60).toFixed(1):''}" placeholder="e.g. 3"></div>
+      <div><label>Language spoken</label><select id="mLang">${opt(LANGS.map(l=>[l.n,l.n]), v('lang',cand.lang))}</select></div>
+      <div><label>Course discussed</label><select id="mCourse">${LEVELS.map(l=>`<optgroup label="${l.name}">${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${(v('chosenDom',null)||cand.domain)===d.id?'selected':''}>${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</option>`).join('')}</optgroup>`).join('')}</select></div>
+      <div><label>Interest level</label><select id="mLvl">${opt([['','Not captured'],['3','High'],['2','Medium'],['1','Low'],['0','Not interested']], v('lvl',''))}</select></div>
+      <div style="grid-column:1/-1"><label>Candidate's message / query</label><textarea id="mMsg" rows="2" placeholder="What did the student or parent say? e.g. wants colleges near home, asked about fees…">${c&&c.query?esc(c.query.text):''}</textarea></div>
+      <div><label>Reverted back</label><select id="mRev">${opt([['','No'],['Call back','Call back'],['WhatsApp reply','WhatsApp reply'],['SMS reply','SMS reply']], c&&c.reverted?c.revertVia:'')}</select></div>
+      <div><label>Admission status</label><select id="mAdm" onchange="document.getElementById('mColW').style.display=['Joined','In process','Dropped'].includes(this.value)?'':'none'">${opt(Object.keys(ADM).map(a=>[a,a]), v('admission','Not converted'))}</select></div>
+      <div id="mColW" style="grid-column:1/-1;${['Joined','In process','Dropped'].includes(v('admission',''))?'':'display:none'}"><label>College</label><select id="mCol"></select></div>
+      <div style="grid-column:1/-1"><label>Counsellor notes</label><textarea id="mNotes" rows="2" placeholder="Next step, call-back time…">${c?esc(c.notes||''):''}</textarea></div>
+    </div>
+    <div class="aerr" id="mErr"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" onclick="document.getElementById('mcModal').classList.remove('on')">Cancel</button><button class="btn pri" onclick="saveManual()">Save call</button></div>`;
+  const fillCol = ()=>{ const d=document.getElementById('mCourse').value; document.getElementById('mCol').innerHTML = COLLEGES[d].map(n=>`<option ${n===(c&&c.college)?'selected':''}>${n}</option>`).join(''); };
+  document.getElementById('mCourse').onchange = fillCol; fillCol();
+  document.getElementById('mcModal').classList.add('on');
+}
+function saveManual(){
+  const g = id => document.getElementById(id).value;
+  const {q, cand} = mcCtx; let c = mcCtx.c;
+  const st = g('mStatus'), durMin = parseFloat(g('mDur')||'0'), lvl = g('mLvl'), dom = g('mCourse');
+  if (st==='answered' && !durMin){ document.getElementById('mErr').textContent = 'Please enter the talk time for an answered call.'; return; }
+  const by = role==='admin' ? (profile.name||'Admin') : cName(actingC);
+  if (!c){   // new manual call (from queue or from a candidate)
+    const att = q ? q.attempt : cand.calls.length+1;
+    c = { id:'CL-'+(callNo++), cand, domain:dom, excelDomain:cand.domain, attempt:att, status:st, date:DAYS[LASTD], time:g('mTime'), ring:0, dur:0,
+          completed:false, lang:null, chosenDom:null, key:null, keyAt:null, repeat:false, lvl:null, query:null, reverted:false, revertVia:null,
+          revertDate:null, reply:null, admission:'N/A', college:null, notes:'', manual:true, by };
+    calls.unshift(c); cand.calls.push(c);
+    if (q){ q.call = c; q.state = 'done'; }
+  }
+  if (c.manual) c.by = c.by || by;
+  c.editedBy = by;
+  Object.assign(c, { status:st, time:g('mTime'), dur:Math.round(durMin*60), lang: st==='answered'||st==='disconnected' ? g('mLang') : null,
+    chosenDom: st==='answered' ? dom : c.chosenDom, domain: st==='answered' ? dom : c.domain, lvl: lvl===''?null:+lvl,
+    notes: g('mNotes'), reverted: !!g('mRev'), revertVia: g('mRev')||null, revertDate: g('mRev') ? (c.revertDate||TODAY) : null,
+    reply: g('mRev') ? (c.reply||'Logged by counsellor') : null });
+  if (c.manual) c.key = null;
+  const msg = g('mMsg').trim();
+  c.query = msg ? {tag:'Counsellor note', text:msg, at:0, len:0, manual:true} : (c.manual ? null : c.query);
+  const adm = g('mAdm');
+  c.admission = (st==='not_picked'||st==='rejected') && adm==='Not converted' ? 'N/A' : adm;
+  if (['Joined','In process','Dropped'].includes(c.admission)){ c.college = g('mCol'); if (!c.revertDate) c.revertDate = TODAY; }
+  if (c.admission==='Joined') makeEvidence(c);
+  ensureAdmId(c);
+  document.getElementById('mcModal').classList.remove('on');
+  toast('Call '+c.id+' saved');
+  renderAll(); if (document.getElementById('drawer').classList.contains('on')) openCall(c.id);
+}
 
 /* ================= Login & registration =================
    Online: accounts are stored in the AdmitConnect database (Supabase Auth + public.profiles).
@@ -1872,6 +1988,7 @@ function startSession(u){
   store.set('profile', profile);
   if (u.college) myCollege = u.college;
   document.getElementById('auth').classList.remove('on');
+  if ((u.role||'counsellor')==='counsellor') actingC = u.id;
   setRole(u.role || 'counsellor', true);
   toast('Welcome, '+u.name.split(' ')[0]+'!');
 }
@@ -1896,6 +2013,7 @@ async function checkSession(){
 }
 
 STATE = {today:todayS, log:logF, adm:admF, cand:candS, msg:msgF};
+callModes = store.get('callModes', callModes); defaultMode = store.get('defaultMode', defaultMode);
 applyPin();
 FILL  = {today:()=>renderView(), log:fillRows, adm:fillAdmRows, cand:()=>renderView(), msg:fillMsgRows};
 renderAll();
