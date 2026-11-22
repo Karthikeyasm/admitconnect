@@ -30,17 +30,12 @@ No secrets to add – Supabase provides the keys to the function automatically.
 ## 5. Server side of the first admin login (developer, once – users never do this)
 1. Edge Functions → deploy `admin-setup` from `supabase/functions/admin-setup/index.ts` with **"Verify JWT" OFF**.
    Admin email = `anushncc2@gmail.com` (to change it, add secret `ADMIN_EMAIL`).
-2. Authentication → **Email Templates → Magic Link** → replace the body with:
-   ```html
-   <h2>Your AdmitConnect login code</h2>
-   <p>Enter this code on the AdmitConnect website:</p>
-   <p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{ .Token }}</p>
-   <p>If you did not ask for this, ignore this email.</p>
-   ```
-   Subject: `Your AdmitConnect login code` → Save.
+2. Authentication → **URL Configuration**: Site URL and Redirect URLs must include `https://karthikeyasm.github.io/admitconnect/` (step 2).
+   No template change is needed: the default "Your sign-in link" email is used.
+   (With custom SMTP you may add `{{ .Token }}` to the Magic Link template; the website also accepts that code.)
 
 What the owner then sees on the website (first visit, while no admin exists):
-**Email ID → "You'll be logged in as Admin" → code arrives by email → enter it → name + password → logged in as Admin.**
+**Email ID → "You'll be logged in as Admin" → "Your sign-in link" email → click Sign in → name + password → logged in as Admin.**
 Only the admin email is accepted. After that the screen is the normal login.
 - Hand over the admin role: Settings › 🔁 Transfer admin role.
 - Lost password: **First-time login / Forgot password?** on the login page.
@@ -81,7 +76,7 @@ You can also edit the wording of the "Invite user" and "Reset password" emails t
 ## Troubleshooting
 - "function is not set up" → step 4 not done, or the name is not exactly `invite-user`.
 - Normal login shows instead of "Welcome to AdmitConnect" → an admin already exists, or `admin-setup` isn't deployed / Verify JWT is on.
-- Email has a link but no code → do step 5.2 (Magic Link template with `{{ .Token }}`).
+- Sign-in link opens the wrong page → check step 2 (URL Configuration).
 - "Only approved admins can add users" → your `profiles` row is not `role = admin`, `approved = true`.
 - Users & roles shows only yourself → step 6 not done (the admin can't read other rows yet).
 - Name shows "Demo Admin" / list is empty → you are in "Continue as demo user". Log out and log in with the admin's email.

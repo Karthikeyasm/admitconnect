@@ -303,7 +303,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:15 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:20 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -1891,12 +1891,13 @@ function renderAuth(mode, msg, isErr){
       <div style="text-align:center;margin-top:10px"><span class="alink" style="font-size:13px" onclick="demoLogin()">Continue as demo user (Admin, mock data) →</span></div>`;
   else if (authMode==='code') body = `
       <h2 style="margin:0 0 6px;font-size:20px">You'll be logged in as Admin</h2>
-      <div class="muted" style="font-size:13px;margin-bottom:14px">We emailed a code to <b>${esc(setupEmail)}</b>. Copy it from the email and enter it here (check spam too).</div>${note(msg,isErr)}
-      <form onsubmit="event.preventDefault();setupStep2()">
+      <div class="muted" style="font-size:13px;margin-bottom:12px">We sent an email to <b>${esc(setupEmail)}</b> (subject <b>"Your sign-in link"</b>). Open it on <b>this laptop</b> and click <b>Sign in</b> – you'll come back here to set your password. Check spam too.</div>${note(msg,isErr)}
+      <details style="font-size:13px;margin-bottom:6px"><summary class="alink">The email shows a code instead?</summary>
+      <form onsubmit="event.preventDefault();setupStep2()" style="margin-top:8px">
         <div class="afield"><label>Code from the email</label><input id="gCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="e.g. 123456"></div>
         <div class="aerr" id="gErr"></div>
-        <button class="abtn" type="submit" id="gBtn">Verify code</button></form>
-      <div style="text-align:center;font-size:13px;margin-top:10px"><span class="alink" onclick="setupStep1(true)">Resend code</span></div>${back}`;
+        <button class="abtn" type="submit" id="gBtn">Verify code</button></form></details>
+      <div style="text-align:center;font-size:13px;margin-top:10px"><span class="alink" onclick="setupStep1(true)">Resend email</span></div>${back}`;
   else if (authMode==='adminpw') body = `
       <h2 style="margin:0 0 6px;font-size:20px">Set your password</h2>
       <div class="muted" style="font-size:13px;margin-bottom:14px">Email verified. Create the password you'll use to log in as Admin (<b>${esc(setupEmail)}</b>).</div>${note(msg,isErr)}
@@ -1927,7 +1928,7 @@ function renderAuth(mode, msg, isErr){
       <ul style="padding-left:18px;margin:6px 0"><li>Bot or manual calls for every student on your course lists</li><li>Track interest, replies and admissions with proof</li><li>Colleges see their own seat status</li></ul>
       <div style="margin-top:auto;font-size:12px;color:#94a3b8">Secure login · <span id="verStampA"></span></div></div>
     <div class="aform">${body}
-      <div class="anote">${setupNeeded ? 'First login: the admin gets a code by email.' : 'Accounts are created by the administrator. You receive an email to set your password.'}</div>
+      <div class="anote">${setupNeeded ? 'First login: the admin gets a sign-in email.' : 'Accounts are created by the administrator. You receive an email to set your password.'}</div>
     </div></div>`;
   const vs = document.getElementById('verStamp'); if (vs) document.getElementById('verStampA').textContent = vs.textContent;
   document.getElementById('auth').classList.add('on');
@@ -1957,10 +1958,10 @@ async function setupStep1(resend){
     const { error } = await sb.functions.invoke('admin-setup', { body:{ action:'request_code', email: setupEmail } });
     if (error){ const m = await fnErr(error); if (/already exists/i.test(m)){ setupNeeded=false; return renderAuth('login', m, true); }
                 if (resend) return renderAuth('code', m, true); errEl.textContent = m; return; }
-    const { error: e2 } = await sb.auth.signInWithOtp({ email: setupEmail, options:{ shouldCreateUser:false } });
+    const { error: e2 } = await sb.auth.signInWithOtp({ email: setupEmail, options:{ shouldCreateUser:false, emailRedirectTo: location.origin + location.pathname } });
     if (e2){ const m = /rate|seconds/i.test(e2.message) ? 'Please wait a minute before asking for another code.' : 'Could not send the code: '+e2.message;
              if (resend) return renderAuth('code', m, true); errEl.textContent = m; return; }
-    renderAuth('code', resend ? '✔ A new code was sent.' : '');
+    renderAuth('code', resend ? '✔ A new email was sent.' : '');
   } catch(e){ (document.getElementById('gErr')||{}).textContent = 'Network problem – please try again.'; }
   finally { busy('gBtn', false, resend ? 'Verify code' : 'Continue'); }
 }
@@ -2212,6 +2213,10 @@ async function checkSession(){
   try {
     const { data } = await sb.auth.getSession();
     if (data && data.session && data.session.user){
+      if (AUTH_LINK==='magiclink' || AUTH_LINK==='email'){        // first admin came back from the sign-in email
+        const { data: me } = await sb.from('profiles').select('role,approved').eq('id', data.session.user.id).maybeSingle();
+        if (!me || me.role!=='admin'){ history.replaceState(null,'',location.pathname+location.search);
+          setupEmail = (data.session.user.email||'').toLowerCase(); setupNeeded = true; renderAuth('adminpw'); return; } }
       if (AUTH_LINK==='invite' || AUTH_LINK==='recovery'){ renderAuth('setpw', AUTH_LINK==='invite' ? 'Welcome! Create the password you will use to log in.' : 'Choose a new password.'); return; }
       await enterWithSupabaseUser(data.session.user); return; }
   } catch(e){ console.warn('[AdmitConnect] session check failed', e); }
