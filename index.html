@@ -212,6 +212,15 @@ textarea,.db select{width:100%;padding:9px;border:1px solid var(--line);border-r
 .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:30;background:#0f172a66}
 .modal.on{display:flex}
 .mbox{background:var(--card);border-radius:14px;width:640px;max-width:94vw;padding:22px;max-height:92vh;overflow:auto}
+.mbox.wide{width:1180px}
+.mc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+.mc-right{border-left:1px solid var(--line,#e2e8f0);padding-left:18px;min-width:0}
+@media (max-width:960px){.mc-grid{grid-template-columns:1fr}.mc-right{border-left:0;padding-left:0;border-top:1px solid var(--line,#e2e8f0);padding-top:12px}}
+.rchips{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.rchips button{padding:4px 10px;font-size:13px}
+.colrow{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;padding:7px 8px;border:1px solid var(--line,#e2e8f0);border-radius:8px;margin-bottom:6px;font-size:13px}
+.colrow.sug{border-color:#6366f1;background:#eef2ff}
+.colrow.dim{opacity:.55}
 .drop{border:2px dashed #c7cbe0;border-radius:12px;padding:28px;text-align:center;color:var(--muted);margin:14px 0;cursor:pointer;display:block}
 .drop:hover{border-color:var(--brand);background:#fafaff}
 .note{background:#eef6ff;color:#1e40af;padding:10px 12px;border-radius:8px;font-size:13px;margin-top:10px}
@@ -303,7 +312,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:35 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:55 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -753,7 +762,9 @@ Object.entries(COLLEGES).forEach(([d,names])=>{
     const fee   = +(cfg.fee[0] + rnd()*(cfg.fee[1]-cfg.fee[0])).toFixed(2);
     const r = rnd();
     const target = r<.3 ? quota : r<.55 ? Math.round(quota*(.8+rnd()*.19)) : Math.round(quota*rnd()*.75);
-    COLLEGE_LIST.push({name:nm, domain:d, total, quota, college:total-quota, cFilled:Math.round((total-quota)*(0.55+rnd()*0.45)), fee, target});
+    let h=0; for (const ch of nm) h=(h*31+ch.charCodeAt(0))>>>0;          // mock eligibility: minimum score %, from the name (no RNG change)
+    const minScore = 55 + (h % 8)*5;                                          // 55 … 90
+    COLLEGE_LIST.push({name:nm, domain:d, total, quota, college:total-quota, cFilled:Math.round((total-quota)*(0.55+rnd()*0.45)), fee, target, minScore});
   });
 });
 const joinsFor = nm => calls.filter(c=>c.admission==='Joined' && c.college===nm).length;
@@ -1364,7 +1375,7 @@ function openCall(id){
       <div><label>Date & time</label>${fmtD(c.date)} 2026, ${c.time}</div>
       <div><label>Listened</label>${mmss(c.dur)} of ${mmss(SCRIPT_SEC)} (${pct(c.dur,SCRIPT_SEC)}%) · ${c.dur?(c.completed?'✔ Completed':'✖ Not completed'):'—'}</div>
       <div><label>Language chosen</label>${c.lang||'<span class="muted">— (Excel: '+c.cand.lang+')</span>'}</div>
-      <div><label>Course chosen on call</label>${c.courses&&c.courses.length>1?c.courses.map(shortDom).join(', '):c.chosenDom?shortDom(c.chosenDom):'<span class="muted">—</span>'}
+      <div><label>Course chosen on call</label>${c.courses&&c.courses.length>1?c.courses.map(shortDom).join(', '):c.chosenDom?shortDom(c.chosenDom):'<span class="muted">—</span>'}${c.suggested&&c.suggested.length?`<div style="margin-top:4px;font-size:12px">🏫 Suggested: ${c.suggested.map(esc).join(', ')}</div>`:''}
         ${c.chosenDom&&c.chosenDom!==c.excelDomain?`<div style="margin-top:4px"><span class="warn">⚠ Excel says ${shortDom(c.excelDomain)}</span></div>`:''}</div>
       <div><label>Last exam score</label>${c.cand.score}%</div>
       <div><label>College offered</label>${c.college||'<span class="muted">—</span>'}</div>
@@ -1775,46 +1786,92 @@ function openManual(qi, callId, candId){
   const v = (k,d)=> c ? (c[k]??d) : d;
   const now = new Date(), tnow = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   const opt = (arr,sel)=>arr.map(([val,l])=>`<option value="${val}" ${String(sel)===String(val)?'selected':''}>${l}</option>`).join('');
-  document.getElementById('mcBox').innerHTML = `
-    <div style="display:flex;align-items:center"><h2 style="margin:0;font-size:18px">${c?'✎ Edit call':'📞 Log manual call'}</h2><button class="x" onclick="document.getElementById('mcModal').classList.remove('on')">×</button></div>
-    <div class="muted" style="margin:4px 0 12px">${cand.name} · ${cand.masked} · ${domName(c?c.domain:cand.domain)}${c?' · '+c.id+(c.manual?'':' (bot call – admin edit)'):''}</div>
-    <div class="set">
-      <div><label>Call status</label><select id="mStatus">${opt(Object.entries(STATUS).map(([k,o])=>[k,o.l]), v('status','answered'))}</select></div>
+  // chip-style single choice: hidden input keeps the value (read by saveManual)
+  const rch = (id, arr, sel, after='') => `<input type="hidden" id="${id}" value="${esc(String(sel??''))}"><div class="rchips" data-for="${id}">${arr.map(([val,l])=>
+      `<button type="button" class="btn${String(sel??'')===String(val)?' pri':''}" data-v="${esc(String(val))}" onclick="pickChip('${id}',this);${after}">${l}</button>`).join('')}</div>`;
+  const box = document.getElementById('mcBox'); box.classList.add('wide');
+  box.innerHTML = `
+    <div style="display:flex;align-items:center"><h2 style="margin:0;font-size:18px">${c?'✎ Edit call':'📞 Log manual call'}</h2><button class="x" onclick="closeMc()">×</button></div>
+    <div class="muted" style="margin:4px 0 12px">${cand.name} · ${cand.masked} · ${domName(c?c.domain:cand.domain)} · Score <b>${cand.score}%</b> · ${cand.city}${c?' · '+c.id+(c.manual?'':' (bot call – admin edit)'):''}</div>
+    <div class="mc-grid"><div>
+    <div class="set" style="gap:10px">
+      <div style="grid-column:1/-1"><label>Call status</label>${rch('mStatus', Object.entries(STATUS).map(([k,o])=>[k,o.l]), v('status','answered'))}</div>
       <div><label>Time of call</label><input id="mTime" type="time" value="${v('time',tnow)}"></div>
-      <div><label>Talk time (minutes)</label><input id="mDur" type="number" min="0" step="0.5" value="${c&&c.dur?(c.dur/60).toFixed(1):''}" placeholder="e.g. 3"></div>
+      <div><label>Talk time (min)</label><input id="mDur" type="number" min="0" step="0.5" value="${c&&c.dur?(c.dur/60).toFixed(1):''}" placeholder="e.g. 3"></div>
       <div><label>Language spoken</label><select id="mLang">${opt(LANGS.map(l=>[l.n,l.n]), v('lang',cand.lang))}</select></div>
       <div style="grid-column:1/-1"><label>Course discussed <span class="muted" style="font-weight:400">(tick one or more)</span></label><div id="mCourseBox"></div></div>
-      <div><label>Interest level</label><select id="mLvl">${opt([['','Not captured'],['3','High'],['2','Medium'],['1','Low'],['0','Not interested']], v('lvl',''))}</select></div>
-      <div style="grid-column:1/-1"><label>Candidate's message / query</label><textarea id="mMsg" rows="2" placeholder="What did the student or parent say? e.g. wants colleges near home, asked about fees…">${c&&c.query?esc(c.query.text):''}</textarea></div>
-      <div><label>Reverted back</label><select id="mRev">${opt([['','No'],['Call back','Call back'],['WhatsApp reply','WhatsApp reply'],['SMS reply','SMS reply']], c&&c.reverted?c.revertVia:'')}</select></div>
-      <div><label>Admission status</label><select id="mAdm" onchange="document.getElementById('mColW').style.display=['Joined','In process','Dropped'].includes(this.value)?'':'none'">${opt(Object.keys(ADM).map(a=>[a,a]), v('admission','Not converted'))}</select></div>
-      <div id="mColW" style="grid-column:1/-1;${['Joined','In process','Dropped'].includes(v('admission',''))?'':'display:none'}"><label>College</label><select id="mCol"></select></div>
+      <div style="grid-column:1/-1"><label>Interest level</label>${rch('mLvl', [['','Not captured'],['3','High'],['2','Medium'],['1','Low'],['0','Not interested']], v('lvl',''))}</div>
+      <div style="grid-column:1/-1"><label>Candidate's message / query</label><textarea id="mMsg" rows="2" placeholder="What did the student or parent say? e.g. wants colleges near home, fees under 1.5 L…">${c&&c.query?esc(c.query.text):''}</textarea></div>
+      <div style="grid-column:1/-1"><label>Reverted back</label>${rch('mRev', [['','No'],['Call back','Call back'],['WhatsApp reply','WhatsApp'],['SMS reply','SMS']], c&&c.reverted?c.revertVia:'')}</div>
+      <div style="grid-column:1/-1"><label>Admission status</label>${rch('mAdm', ['Not converted','In process','Joined','Dropped'].map(a=>[a,a]), v('admission','Not converted')==='N/A'?'Not converted':v('admission','Not converted'), "document.getElementById('mColW').style.display=['Joined','In process','Dropped'].includes(document.getElementById('mAdm').value)?'':'none'")}</div>
+      <div id="mColW" style="grid-column:1/-1;${['Joined','In process','Dropped'].includes(v('admission',''))?'':'display:none'}"><label>College</label><select id="mCol" onchange="mcCtx.college=this.value"></select></div>
       <div style="grid-column:1/-1"><label>Counsellor notes</label><textarea id="mNotes" rows="2" placeholder="Next step, call-back time…">${c?esc(c.notes||''):''}</textarea></div>
-    </div>
+    </div></div>
+    <div class="mc-right" id="mcRight"></div></div>
     <div class="aerr" id="mErr"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" onclick="document.getElementById('mcModal').classList.remove('on')">Cancel</button><button class="btn pri" onclick="saveManual()">Save call</button></div>`;
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" onclick="closeMc()">Cancel</button><button class="btn pri" onclick="saveManual()">Save call</button></div>`;
   // Course picker: level → (PU) Science / Commerce → tick boxes for the courses under it
   const start = (c && c.courses) || [v('chosenDom',null)||cand.domain];
   const d0 = DOMAINS.find(d=>d.id===start[0]) || COURSES[0];
   mcCtx.ticks = new Set(start); mcCtx.lv = d0.lv; mcCtx.stream = d0.lv==='pu' ? (d0.grp ? 'sci' : 'com') : null;
   mcCtx.college = c && c.college;
+  mcCtx.sug = new Set((c && c.suggested) || []);
+  mcCtx.f = mcCtx.f || {fee:'', fit:true, open:true, sort:'rec'};
   renderCourseBox();
   document.getElementById('mcModal').classList.add('on');
+}
+function pickChip(id, btn){
+  document.getElementById(id).value = btn.dataset.v;
+  btn.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('pri', b===btn));
+}
+function closeMc(){ const m=document.getElementById('mcModal'); m.classList.remove('on'); document.getElementById('mcBox').classList.remove('wide'); }
+// Right-hand panel: colleges for the ticked course(s), filtered by fee / candidate score / open seats
+function renderColleges(){
+  const el = document.getElementById('mcRight'); if (!el) return;
+  const f = mcCtx.f, score = +mcCtx.cand.score, ids = [...mcCtx.ticks];
+  if (!ids.length){ el.innerHTML = '<div class="muted" style="font-size:13px;margin-top:30px;text-align:center">🏫 Tick a course on the left to see matching colleges.</div>'; return; }
+  let rows = COLLEGE_LIST.filter(x=>ids.includes(x.domain)).map(seatRow).map(r=>({...r, fits: score>=r.minScore}));
+  const all = rows.length;
+  if (f.fee) rows = rows.filter(r=>r.fee<=+f.fee);
+  if (f.fit) rows = rows.filter(r=>r.fits);
+  if (f.open) rows = rows.filter(r=>r.rem>0);
+  const recScore = r => (r.fits?0:100) + (r.rem>0?0:50) + r.fee*3 - Math.min(10, score-r.minScore)/5;
+  rows.sort(f.sort==='fee' ? (a,b)=>a.fee-b.fee : f.sort==='seats' ? (a,b)=>b.rem-a.rem : (a,b)=>recScore(a)-recScore(b));
+  const rec = new Set(rows.filter(r=>r.fits && r.rem>0).slice(0,3).map(r=>r.name));
+  const sel = (k,arr) => `<select style="width:auto;padding:4px 6px;font-size:13px" onchange="mcCtx.f.${k}=this.value;renderColleges()">${arr.map(([v,l])=>`<option value="${v}" ${String(f[k])===String(v)?'selected':''}>${l}</option>`).join('')}</select>`;
+  const tick = (k,l) => `<label style="display:inline-flex;gap:5px;align-items:center;font-size:13px;font-weight:400;width:auto;margin:0;color:inherit"><input type="checkbox" style="width:15px;height:15px;margin:0" ${f[k]?'checked':''} onchange="mcCtx.f.${k}=this.checked;renderColleges()"> ${l}</label>`;
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px"><b>🏫 Colleges for ${ids.map(shortDom).join(', ')}</b><span class="sp"></span><span class="muted" style="font-size:12px">${rows.length} of ${all}</span></div>
+    <div style="display:flex;gap:8px 12px;flex-wrap:wrap;align-items:center;margin:8px 0 10px">
+      ${sel('fee',[['','Any fee'],['1','≤ ₹1 L/yr'],['1.5','≤ ₹1.5 L/yr'],['2','≤ ₹2 L/yr'],['3','≤ ₹3 L/yr'],['5','≤ ₹5 L/yr']])}
+      ${sel('sort',[['rec','⭐ Recommended first'],['fee','Lowest fee'],['seats','Most seats left']])}
+      ${tick('fit','Fits score ('+score+'%)')} ${tick('open','Seats open')}</div>
+    <div style="max-height:52vh;overflow:auto">${rows.length ? rows.map(r=>`
+      <div class="colrow${mcCtx.sug.has(r.name)?' sug':''}${r.fits?'':' dim'}">
+        <input type="checkbox" title="Suggested to the candidate" style="width:16px;height:16px;margin:0" ${mcCtx.sug.has(r.name)?'checked':''} onchange="this.checked?mcCtx.sug.add(this.dataset.n):mcCtx.sug.delete(this.dataset.n);renderColleges();renderCourseBox(true)" data-n="${esc(r.name)}">
+        <div><b>${rec.has(r.name)?'⭐ ':''}${esc(r.name)}</b><div class="muted" style="font-size:12px">${shortDom(r.domain)} · Min score ${r.minScore}%${r.fits?'':' <span style="color:#dc2626">(above candidate)</span>'}</div></div>
+        <div style="text-align:right"><b>₹${r.fee.toFixed(2)} L</b><span class="muted">/yr</span><div><span class="pill" style="color:${SEAT_ST[r.st].c};background:${SEAT_ST[r.st].bg}">${r.rem} seats · ${r.st}</span></div></div>
+      </div>`).join('') : '<div class="muted" style="font-size:13px">No college matches these filters. Try a higher fee limit or untick "Fits score".</div>'}</div>
+    <div class="muted" style="font-size:12px;margin-top:6px">⭐ = best fit (score fits, seats open, lower fee). Tick a college to mark it as <b>suggested</b> to the candidate – it is saved with the call and listed first under Admission › College. Fees, seats and minimum scores are mock values.</div>`;
 }
 function mcCourses(){   // courses shown for the chosen level / stream
   return COURSES.filter(d=>d.lv===mcCtx.lv && (mcCtx.lv!=='pu' || (mcCtx.stream==='sci' ? d.grp==='pu_sci' : !d.grp)));
 }
-function renderCourseBox(){
-  const chip = (on, label, fn) => `<button type="button" class="btn${on?' pri':''}" style="padding:5px 12px;font-size:13px" onclick="${fn}">${label}</button>`;
+function renderCourseBox(onlyCol){
   const ticked = COURSES.filter(d=>mcCtx.ticks.has(d.id));
+  if (!onlyCol){
+  const chip = (on, label, fn) => `<button type="button" class="btn${on?' pri':''}" style="padding:5px 12px;font-size:13px" onclick="${fn}">${label}</button>`;
   document.getElementById('mCourseBox').innerHTML = `
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${LEVELS.map(l=>chip(mcCtx.lv===l.id, l.ic+' '+l.name, `mcCtx.lv='${l.id}';mcCtx.stream=${l.id==='pu'?"mcCtx.stream||'sci'":'null'};renderCourseBox()`)).join('')}</div>
     ${mcCtx.lv==='pu' ? `<div style="display:flex;gap:6px;margin-top:6px">${chip(mcCtx.stream==='sci','🔬 Science',"mcCtx.stream='sci';renderCourseBox()")}${chip(mcCtx.stream==='com','₹ Commerce'+(mcCtx.ticks.has('pu_com')?' ✔':''),"mcCtx.stream='com';mcCtx.ticks.has('pu_com')?mcCtx.ticks.delete('pu_com'):mcCtx.ticks.add('pu_com');renderCourseBox()")}</div>` : ''}
     <div style="display:flex;gap:6px 18px;flex-wrap:wrap;margin-top:8px">${(mcCtx.lv==='pu'&&mcCtx.stream==='com') ? '' : mcCourses().map(d=>`<label style="display:inline-flex;gap:6px;align-items:center;font-size:14px;cursor:pointer;font-weight:400;width:auto;margin:0;white-space:nowrap;color:inherit"><input type="checkbox" style="width:16px;height:16px;margin:0;padding:0;flex:none" ${mcCtx.ticks.has(d.id)?'checked':''} onchange="this.checked?mcCtx.ticks.add('${d.id}'):mcCtx.ticks.delete('${d.id}');renderCourseBox()"> ${d.name}</label>`).join('')}</div>
     <div class="muted" style="font-size:12px;margin-top:6px">${ticked.length ? 'Selected: <b>'+ticked.map(d=>shortDom(d.id)).join(', ')+'</b>' : 'No course ticked yet'}</div>`;
-  const main = ticked[0], col = document.getElementById('mCol');
-  if (col){ const keep = col.value || mcCtx.college;
-    col.innerHTML = main ? COLLEGES[main.id].map(n=>`<option ${n===keep?'selected':''}>${n}</option>`).join('') : '<option value="">Tick a course first</option>'; }
+  renderColleges(); }
+  const col = document.getElementById('mCol');
+  if (col){ const sug = [...mcCtx.sug], keep = mcCtx.college || sug[0];
+    const rest = ticked.flatMap(d=>COLLEGES[d.id]).filter(n=>!mcCtx.sug.has(n));
+    col.innerHTML = (sug.length||rest.length) ? (sug.length?`<optgroup label="Suggested on this call">${sug.map(n=>`<option ${n===keep?'selected':''}>${esc(n)}</option>`).join('')}</optgroup>`:'')
+      + `<optgroup label="Other colleges">${rest.map(n=>`<option ${n===keep?'selected':''}>${esc(n)}</option>`).join('')}</optgroup>` : '<option value="">Tick a course first</option>'; }
 }
 function saveManual(){
   const g = id => document.getElementById(id).value;
@@ -1835,7 +1892,7 @@ function saveManual(){
   if (c.manual) c.by = c.by || by;
   c.editedBy = by;
   Object.assign(c, { status:st, time:g('mTime'), dur:Math.round(durMin*60), lang: st==='answered'||st==='disconnected' ? g('mLang') : null,
-    courses: st==='answered' ? courses : c.courses,
+    courses: st==='answered' ? courses : c.courses, suggested: [...mcCtx.sug],
     chosenDom: st==='answered' ? dom : c.chosenDom, domain: st==='answered' ? dom : c.domain, lvl: lvl===''?null:+lvl,
     notes: g('mNotes'), reverted: !!g('mRev'), revertVia: g('mRev')||null, revertDate: g('mRev') ? (c.revertDate||TODAY) : null,
     reply: g('mRev') ? (c.reply||'Logged by counsellor') : null });
@@ -1847,7 +1904,7 @@ function saveManual(){
   if (['Joined','In process','Dropped'].includes(c.admission)){ c.college = g('mCol'); if (!c.revertDate) c.revertDate = TODAY; }
   if (c.admission==='Joined') makeEvidence(c);
   ensureAdmId(c);
-  document.getElementById('mcModal').classList.remove('on');
+  closeMc();
   toast('Call '+c.id+' saved');
   renderAll(); if (document.getElementById('drawer').classList.contains('on')) openCall(c.id);
 }
@@ -2071,6 +2128,7 @@ async function doSetPw(){
 
 /* ---------- Admin: add a user (no self-registration) ---------- */
 function openAddUser(){
+  document.getElementById('mcBox').classList.remove('wide');
   document.getElementById('mcBox').innerHTML = `
     <div style="display:flex;align-items:center"><h2 style="margin:0;font-size:18px">➕ Add user</h2><button class="x" onclick="document.getElementById('mcModal').classList.remove('on')">×</button></div>
     <div class="muted" style="margin:4px 0 12px;font-size:13px">The person receives an email with a link to set their own password.</div>
