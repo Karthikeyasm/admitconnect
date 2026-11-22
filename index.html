@@ -303,7 +303,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:15 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:30 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -1636,7 +1636,10 @@ function renderCollege(v){
    Right: read-only guide (call flow, IVR keys, colour meanings) */
 const THEMES = [['light', 'Light', ['#111827', '#4f46e5', '#f5f6fa']], ['dark', 'Dark', ['#060b16', '#6366f1', '#121b2e']], ['ocean', 'Ocean', ['#0c2a3e', '#0284c7', '#f2f8fc']], ['forest', 'Forest', ['#0f2a1c', '#15803d', '#f3f8f4']], ['sunset', 'Sunset', ['#2b1608', '#ea580c', '#fbf6f2']]];
 function renderSettings(v){
-  const inp = (k,l,ph)=>`<div><label>${l}</label><input value="${profile[k]||''}" placeholder="${ph||''}" oninput="setProf('${k}',this.value)"></div>`;
+  // Real database accounts: name / email / phone come from the database (read-only). Demo user: fixed "Demo Admin".
+  const locked = k => (sbMe && ['name','email','phone','id'].includes(k)) || (profile.id==='DEMO' && ['name','email','phone','id'].includes(k));
+  const inp = (k,l,ph)=>`<div><label>${l}${locked(k)?' <span class="muted">(managed by admin)</span>':''}</label><input value="${esc(profile[k]||'')}" placeholder="${ph||''}" ${locked(k)?'disabled':`oninput="setProf('${k}',this.value)"`}></div>`;
+  const who = !sb ? '📴 Offline copy – browser-only accounts' : sbMe ? `🟢 Logged in to the database as <b>${esc(sbMe.full_name)}</b> (${sbMe.role})` : profile.id==='DEMO' ? '🟡 Demo user – mock data only, not a database account' : '';
   v.innerHTML = `<div class="sgrid">
   <div>
     ${isAdmin?`<div class="card"><h3>📞 Calling mode <small>· per counsellor</small></h3>
@@ -1650,7 +1653,7 @@ function renderSettings(v){
         <option value="auto" ${defaultMode==='auto'?'selected':''}>🤖 Automatic</option><option value="manual" ${defaultMode==='manual'?'selected':''}>✍ Manual</option></select></div>
         <div><label>Preview a counsellor's view</label><select onchange="if(this.value)setRole(this.value)"><option value="">— choose —</option>${counsellors().map(c=>`<option value="counsellor:${c.id}">${c.name} (${MODE_LBL[modeOf(c.id)]})</option>`).join('')}</select></div></div></div>
 `:''}
-    <div class="card"><h3>👤 My profile <small>· shown in the left panel</small></h3><div class="set">
+    <div class="card"><h3>👤 My profile <small>· shown in the left panel</small></h3>${who?`<div style="font-size:13px;margin:-4px 0 10px">${who}</div>`:''}<div class="set">
       ${inp('name','Full name','e.g. Karthik S')}
       ${(!sbMe || sbMe.role==='admin') ? `<div><label>${T('role')} (preview only – does not change any account)</label><select onchange="setRole(this.value)">${roleOptions(false)}</select></div>`
       : `<div><label>${T('role')}</label><input value="${T(ROLES.find(r=>r[0]===role)[1])} (set by your admin)" disabled></div>`}
@@ -1688,15 +1691,7 @@ function renderSettings(v){
       <div><label>Parallel calls</label><select><option>1 (one by one)</option><option>5</option><option>10</option></select></div>
     </div><div style="margin-top:14px"><button class="btn pri" onclick="toast('Settings saved (demo only)')">Save settings</button></div></div>
 
-    <div class="card mini"><div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0">👥 Accounts <small>· created by admins only</small></h3><span class="sp"></span><button class="btn pri" onclick="openAddUser()">➕ Add user</button></div><div id="acctList" class="muted" style="margin-top:10px">Loading…</div></div>
-    <div class="card mini"><h3>👥 Users & roles <small>· mock</small></h3>
-      <table><thead><tr><th>User</th><th>Role</th><th>Access</th></tr></thead><tbody>
-        <tr><td>${profile.name||'Admin User'}</td><td><span class="role" style="background:#ede9fe;color:#5b21b6">Administrator</span></td><td>Everything + Admin section (analytics, seats & fees, settings)</td></tr>
-        <tr><td>Counsellor 1</td><td><span class="role" style="background:#e0f2fe;color:#075985">Counsellor</span></td><td>Today's campaign (start / pause), call log, admissions, candidates, messages</td></tr>
-        <tr><td>Counsellor 2</td><td><span class="role" style="background:#e0f2fe;color:#075985">Counsellor</span></td><td>Same as Counsellor 1</td></tr>
-        <tr><td>${myCollege}</td><td><span class="role" style="background:#ccfbf1;color:#115e59">College partner</span></td><td>Own seat dashboard + basic settings only</td></tr>
-      </tbody></table>
-      <div style="margin-top:10px"><button class="btn" onclick="openAddUser()">+ Add user</button></div></div>
+    <div class="card mini"><div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0">👥 Users &amp; roles <small>· real accounts · one admin · created by the admin only</small></h3><span class="sp"></span><button class="btn pri" onclick="openAddUser()">➕ Add user</button></div><div id="acctList" class="muted" style="margin-top:10px">Loading…</div></div>
     <div class="card"><h3>🏫 College partner access</h3><div class="set">
       <div style="grid-column:1/-1"><label>College shown in the College partner view (demo)</label><select onchange="myCollege=this.value;toast('College partner view will show '+this.value)">${collegeOptions(myCollege)}</select></div>
     </div><div class="muted" style="font-size:12px;margin-top:8px">A live system gives each college its own login that only shows its own seats.</div></div>`:''}
@@ -1957,7 +1952,7 @@ function openAddUser(){
       <div><label>Full name</label><input id="aName" placeholder="e.g. Anush G N"></div>
       <div><label>Email ID</label><input id="aEmail" type="email" placeholder="name@example.com"></div>
       <div><label>Phone number</label><input id="aPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div>
-      <div><label>Role</label><select id="aRole" onchange="document.getElementById('aColW').style.display=this.value==='college'?'':'none'"><option value="counsellor">🎧 Counsellor</option><option value="college">🏫 College partner</option><option value="admin">🛡 Admin</option></select></div>
+      <div><label>Role</label><select id="aRole" onchange="document.getElementById('aColW').style.display=this.value==='college'?'':'none'"><option value="counsellor">🎧 Counsellor</option><option value="college">🏫 College partner</option></select></div>
       <div id="aColW" style="grid-column:1/-1;display:none"><label>College</label><select id="aCol">${collegeOptions(myCollege)}</select></div>
       <div><label>Employee ID (optional)</label><input id="aEmp" placeholder="e.g. CN-021"></div>
       <div><label>Calling mode (counsellors)</label><select id="aMode"><option value="auto">🤖 Automatic</option><option value="manual">✍ Manual</option></select></div>
@@ -1969,6 +1964,7 @@ function openAddUser(){
 async function addUser(){
   const v = id => document.getElementById(id).value.trim(), err = m => (document.getElementById('aErr').textContent = m, false);
   const name=v('aName'), email=v('aEmail').toLowerCase(), phone=v('aPhone').replace(/\D/g,''), rl=v('aRole'), college = rl==='college'?v('aCol'):null, emp=v('aEmp')||null, mode=v('aMode');
+  if (rl==='admin') return err('There can be only one admin. New users are Counsellors or College partners.');
   if (name.length<2) return err('Please enter the full name.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return err('Please enter a valid email ID.');
   if (!/^[6-9]\d{9}$/.test(phone)) return err('Phone must be a 10-digit Indian mobile number (starts with 6–9).');
@@ -2067,7 +2063,7 @@ function paintBell(errMsg){
   const c = document.getElementById('bellCount'); if (!c) return;
   c.innerHTML = pending.length ? `<b>${pending.length}</b>` : '';
   const P = document.getElementById('bellP');
-  const roleSel = (id,cur) => `<select id="rq_${id}">${[['counsellor','🎧 Counsellor'],['college','🏫 College partner'],['admin','🛡 Admin']].map(([v,l])=>`<option value="${v}" ${v===cur?'selected':''}>${l}</option>`).join('')}</select>`;
+  const roleSel = (id,cur) => `<select id="rq_${id}">${[['counsellor','🎧 Counsellor'],['college','🏫 College partner']].map(([v,l])=>`<option value="${v}" ${v===cur?'selected':''}>${l}</option>`).join('')}</select>`;
   P.innerHTML = `<div style="display:flex;align-items:center"><b>🔔 Account requests</b><span class="sp"></span><span class="alink" style="font-size:12px" onclick="loadPending()">↻ Refresh</span></div>` +
     (!sb ? '<div class="muted" style="margin-top:8px;font-size:13px">Offline copy – approvals need the online site.</div>'
     : !isDbAdmin() ? '<div class="muted" style="margin-top:8px;font-size:13px">Log in with a real <b>admin</b> account to see requests. (The demo user is not stored in the database.)</div>'
@@ -2082,24 +2078,27 @@ function toggleBell(e){ e.stopPropagation(); const P=document.getElementById('be
 document.addEventListener('click', ()=>{ const P=document.getElementById('bellP'); if (P) P.classList.remove('on'); });
 async function approveUser(id, roleOverride){
   const sel = document.getElementById('rq_'+id) || document.getElementById('ac_'+id);
-  const r = roleOverride || (sel ? sel.value : 'counsellor');
+  let r = roleOverride || (sel ? sel.value : 'counsellor'); if (r==='admin') r = 'counsellor';   // only one admin
   const { error } = await sb.from('profiles').update({ approved:true, role:r }).eq('id', id);
   if (error){ toast('Approval failed: '+error.message); console.warn(error); return; }
   toast('✔ Approved as '+r); await loadPending(); if (curView==='settings') loadAccounts();
 }
 async function setAccount(id, field, val){
+  if (field==='role' && val==='admin'){ toast('There can be only one admin.'); return; }
   const { error } = await sb.from('profiles').update({ [field]: val }).eq('id', id);
   if (error){ toast('Update failed: '+error.message); console.warn(error); }
   else toast('Saved'); loadPending(); loadAccounts();
 }
 async function loadAccounts(){
   const el = document.getElementById('acctList'); if (!el) return;
-  if (!isDbAdmin()){ const lu=getUsers(); el.innerHTML = `<div class="muted" style="font-size:13px">${sb?'Log in with a real admin account (not the demo user) to manage database accounts.':'Offline demo accounts in this browser:'}</div>`+(!sb&&lu.length?`<table><thead><tr><th>Name</th><th>Email · Phone</th><th>Role</th><th>Status</th></tr></thead><tbody>${lu.map(u=>`<tr style="cursor:default"><td>${esc(u.name)}</td><td style="font-size:12px">${esc(u.email)}<br>${esc(u.phone)}</td><td>${u.role}</td><td>${u.mustChange?'<b style="color:#d97706">Temporary password</b>':'Active'}</td></tr>`).join('')}</tbody></table>`:''); return; }
+  if (!isDbAdmin()){ const lu=getUsers(); el.innerHTML = `<div class="muted" style="font-size:13px">${sb?(profile.id==='DEMO'?'You are using the <b>demo user</b>, which is not a database account, so the real user list cannot be shown. Log out and log in with the admin\'s own email (see SETUP.md, step 5).':'Only the admin can see this list.'):'Offline demo accounts in this browser:'}</div>`+(!sb&&lu.length?`<table><thead><tr><th>Name</th><th>Email · Phone</th><th>Role</th><th>Status</th></tr></thead><tbody>${lu.map(u=>`<tr style="cursor:default"><td>${esc(u.name)}</td><td style="font-size:12px">${esc(u.email)}<br>${esc(u.phone)}</td><td>${u.role}</td><td>${u.mustChange?'<b style="color:#d97706">Temporary password</b>':'Active'}</td></tr>`).join('')}</tbody></table>`:''); return; }
   const { data, error } = await sb.from('profiles').select('id,full_name,email,phone,role,college,approved,created_at').order('created_at');
   if (error){ el.innerHTML = `<div class="aerr">Could not load accounts: ${esc(error.message)}</div>`; return; }
-  el.innerHTML = `<table><thead><tr><th>Name</th><th>Email · Phone</th><th>Role</th><th>Active</th><th></th></tr></thead><tbody>${(data||[]).map(u=>`<tr style="cursor:default">
+  data.sort((a,b)=>(b.role==='admin')-(a.role==='admin'));
+  const hint = data.length<=1 ? '<div class="note" style="margin-bottom:8px">Only your own account is visible. Either no one else has been added yet, or the database rule does not let the admin read other accounts – run the SQL in SETUP.md, step 6.</div>' : '';
+  el.innerHTML = hint + `<table><thead><tr><th>Name</th><th>Email · Phone</th><th>Role</th><th>Active</th><th></th></tr></thead><tbody>${(data||[]).map(u=>`<tr style="cursor:default">
     <td><b>${esc(u.full_name)}</b>${u.id===sbMe.id?' <span class="muted">(you)</span>':''}</td><td style="font-size:12px">${esc(u.email)}<br>${esc(u.phone||'')}</td>
-    <td><select id="ac_${u.id}" ${u.id===sbMe.id?'disabled':''} onchange="setAccount('${u.id}','role',this.value)">${[['counsellor','🎧 Counsellor'],['college','🏫 College'],['admin','🛡 Admin']].map(([v,l])=>`<option value="${v}" ${v===u.role?'selected':''}>${l}</option>`).join('')}</select></td>
+    <td>${u.role==='admin'?'<span class="role" style="background:#ede9fe;color:#5b21b6">🛡 Admin</span>':`<select id="ac_${u.id}" onchange="setAccount('${u.id}','role',this.value)">${[['counsellor','🎧 Counsellor'],['college','🏫 College']].map(([v,l])=>`<option value="${v}" ${v===u.role?'selected':''}>${l}</option>`).join('')}</select>`}</td>
     <td>${u.id===sbMe.id?'✔':`<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" ${u.approved?'checked':''} onchange="setAccount('${u.id}','approved',this.checked)"> ${u.approved?'Yes':'<b style="color:#dc2626">Waiting</b>'}</label>`}</td>
     <td>${u.id===sbMe.id?'':`<span class="alink" style="font-size:12px" onclick="sendSetPwLink('${esc(u.email)}')">✉ Send set-password link</span>`}</td></tr>`).join('')}</tbody></table>`;
 }

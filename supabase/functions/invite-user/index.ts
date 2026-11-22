@@ -3,7 +3,8 @@
 // Runs inside Supabase, so the secret service-role key never reaches the browser.
 //
 // Request (POST, JSON, called from the website with the admin's login token):
-//   { full_name, email, phone, role: "counsellor" | "college" | "admin", college?, employee_id?, redirect_to }
+//   { full_name, email, phone, role: "counsellor" | "college", college?, employee_id?, redirect_to }
+// There is only ONE admin – this function never creates another one.
 // Response: { ok: true, user_id } or { error: "..." }
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -16,7 +17,7 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-const ROLES = ["counsellor", "college", "admin"];
+const ROLES = ["counsellor", "college"];   // only one admin: new users are counsellors or college partners
 // Only these sites may receive the set-password link
 const ALLOWED_REDIRECTS = ["https://karthikeyasm.github.io/admitconnect/"];
 
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
     if (fullName.length < 2) return json({ error: "Full name is required." }, 400);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ error: "Invalid email ID." }, 400);
     if (!/^[6-9]\d{9}$/.test(phone)) return json({ error: "Phone must be a 10-digit Indian mobile number." }, 400);
-    if (!ROLES.includes(role)) return json({ error: "Invalid role." }, 400);
+    if (!ROLES.includes(role)) return json({ error: "New users can only be Counsellors or College partners (there is only one admin)." }, 400);
     if (role === "college" && !college) return json({ error: "Choose the college for a college partner." }, 400);
 
     // 3. Create the account and send the invite email (link validity = Auth › Email OTP expiration).
