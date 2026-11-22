@@ -3,11 +3,12 @@
 // and lets the admin hand the role over to someone else later.
 //
 // POST { action: "status" }                          → { needs_setup: true|false }        (public)
-// POST { action: "verify_code", email, setup_code }  → { ok } if the admin code is right  (public, only while no admin exists)
-// POST { action: "create_admin", email, setup_code, full_name, password } → admin created (public, only while no admin exists)
+// POST { action: "request_code", email }            → creates the admin login (only the admin email, only while no admin exists);
+//                                                       the website then asks Supabase Auth to email a one-time code
+// POST { action: "claim_admin", full_name }          → (logged in via the code) becomes the one admin
 // POST { action: "transfer", to_user_id }            → current admin becomes counsellor,   (logged-in admin only)
 //                                                       chosen user becomes the one admin
-// Deploy with "Verify JWT" OFF (the first admin has no login yet). Secret needed: ADMIN_SETUP_CODE.
+// Deploy with "Verify JWT" OFF (the first admin has no login yet). Optional secret ADMIN_EMAIL (default anushncc2@gmail.com).
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -33,41 +34,38 @@ Deno.serve(async (req) => {
     // ---- 1. Does the site still need its first admin? ----
     if (b.action === "status") return json({ needs_setup: (await adminCount()) === 0 });
 
-    // ---- 2. First login: check the admin code, then create the admin with the chosen password ----
-    const checkCode = async () => {
-      if ((await adminCount()) > 0) return json({ error: "An admin already exists. Please log in, or ask the admin to add you." }, 409);
-      const code = Deno.env.get("ADMIN_SETUP_CODE") || "";
-      if (!code) return json({ error: "The admin code has not been set on the server yet." }, 503);
-      if (String(b.setup_code || "") !== code) {
-        await new Promise((r) => setTimeout(r, 1500));            // slow down guessing
-        return json({ error: "The admin code is incorrect." }, 403);
+    // ---- 2. First login: the admin email gets a one-time code by email (sent by Supabase Auth) ----
+    // Only the configured admin email can become admin, and only while no admin exists.
+    const ADMIN_EMAILS = (Deno.env.get("ADMIN_EMAIL") || "anushncc2@gmail.com").toLowerCase().split(",").map((s) => s.trim());
+    const gate = async (email: string) => {
+      if ((await adminCount()) > 0) return json({ error: "An admin already exists. Please log in, or use Forgot password." }, 409);
+      if (!ADMIN_EMAILS.includes(email)) {
+        await new Promise((r) => setTimeout(r, 1000));
+        return json({ error: "This email is not registered as the AdmitConnect admin." }, 403);
       }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(b.email || ""))) return json({ error: "Invalid email ID." }, 400);
       return null;
     };
-    if (b.action === "verify_code") return (await checkCode()) ?? json({ ok: true });
 
-    if (b.action === "create_admin") {
-      const bad = await checkCode(); if (bad) return bad;
-      const email = String(b.email).trim().toLowerCase(), fullName = String(b.full_name || "").trim(), pw = String(b.password || "");
+    // 2a. Make sure the admin's login exists, so the website can email the code
+    if (b.action === "request_code") {
+      const email = String(b.email || "").trim().toLowerCase();
+      const bad = await gate(email); if (bad) return bad;
+      const { error } = await db.auth.admin.createUser({ email, email_confirm: true, user_metadata: { role: "admin" } });
+      if (error && !/already/i.test(error.message)) return json({ error: error.message }, 400);
+      return json({ ok: true });
+    }
+
+    // 2b. After the code is verified and the password set: make this logged-in user the admin
+    if (b.action === "claim_admin") {
+      const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+      const { data: who } = await db.auth.getUser(token);
+      if (!who?.user) return json({ error: "Please verify the email code again." }, 401);
+      const email = (who.user.email || "").toLowerCase();
+      const bad = await gate(email); if (bad) return bad;
+      const fullName = String(b.full_name || "").trim();
       if (fullName.length < 2) return json({ error: "Full name is required." }, 400);
-      if (pw.length < 8 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)) return json({ error: "Password must be at least 8 characters with letters and numbers." }, 400);
-
-      // New user → create with the chosen password (email counts as confirmed: the admin code proves who they are).
-      // Existing user with this email → set the password and promote.
-      let userId: string;
-      const { data: cu, error: cErr } = await db.auth.admin.createUser({ email, password: pw, email_confirm: true, user_metadata: { full_name: fullName, role: "admin" } });
-      if (cErr) {
-        if (!/already/i.test(cErr.message)) return json({ error: cErr.message }, 400);
-        const { data: p } = await db.from("profiles").select("id").eq("email", email).single();
-        if (!p) return json({ error: "This email exists but has no profile. Contact support." }, 400);
-        userId = p.id;
-        const { error: uErr } = await db.auth.admin.updateUserById(userId, { password: pw, email_confirm: true });
-        if (uErr) return json({ error: uErr.message }, 400);
-      } else userId = cu.user.id;
-
       const { error: pErr } = await db.from("profiles").upsert(
-        { id: userId, full_name: fullName, email, role: "admin", approved: true }, { onConflict: "id" });
+        { id: who.user.id, full_name: fullName, email, role: "admin", approved: true }, { onConflict: "id" });
       if (pErr) return json({ error: "Could not save the admin profile: " + pErr.message }, 500);
       return json({ ok: true });
     }
