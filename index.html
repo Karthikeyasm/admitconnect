@@ -303,7 +303,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 16:50 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 16:58 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -1877,7 +1877,7 @@ function renderAuth(mode, msg, isErr){
         <button class="abtn" type="submit" id="gBtn">Continue</button></form>
       <div style="text-align:center;margin-top:12px"><span class="alink" style="font-size:13px" onclick="demoLogin()">Continue as demo user (mock data) →</span></div>`;
   else if (authMode==='login') body = `
-      <h2 style="margin:0 0 14px;font-size:20px">Log in</h2>${note(msg,isErr)}
+      <h2 style="margin:0 0 14px;font-size:20px">Log in</h2>${note(msg,isErr)}${setupCheckFailed?note('First-time admin login is not switched on yet: the <b>admin-setup</b> function is missing on the server (SETUP.md, step 5).',true):''}
       <form onsubmit="event.preventDefault();doLogin()">
         <div class="afield"><label>Email ID</label><input id="lId" autocomplete="username" placeholder="name@example.com"></div>
         <div class="afield"><label>Password</label><input id="lPw" type="password" autocomplete="current-password" placeholder="Your password"></div>
@@ -1934,12 +1934,14 @@ function renderAuth(mode, msg, isErr){
   const f = document.querySelector('#auth input'); if (f && !f.value) f.focus();
 }
 /* ---------- First login on a new site: email → admin code → password ---------- */
-let setupNeeded = null;   // null = not checked yet
+let setupNeeded = null, setupCheckFailed = false;   // null = not checked yet
 const fnErr = async error => { let m = error.message || String(error); try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch(e){} return m; };
 async function checkSetupNeeded(){
+  setupCheckFailed = false;
   try { const { data, error } = await sb.functions.invoke('admin-setup', { body:{ action:'status' } });
+        if (error || !data) setupCheckFailed = true;
         setupNeeded = !error && data && data.needs_setup === true; }
-  catch(e){ setupNeeded = false; }
+  catch(e){ setupNeeded = false; setupCheckFailed = true; }
   if (authMode==='login') renderAuth('login');
 }
 function setupStep1(){
