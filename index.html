@@ -312,7 +312,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:55 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 18:10 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -772,6 +772,12 @@ function seatRow(s){
   const j = joinsFor(s.name), filled = Math.min(s.quota, Math.max(s.target, j)), rem = s.quota-filled, p = pct(filled,s.quota);
   return {...s, joins:j, filled, rem, p, st: rem===0?'Full' : p>=80?'Almost full':'Open'};
 }
+const KA_DISTRICTS = ['Bagalkot','Ballari','Belagavi','Bengaluru Rural','Bengaluru Urban','Bidar','Chamarajanagar','Chikkaballapur','Chikkamagaluru','Chitradurga',
+  'Dakshina Kannada','Davanagere','Dharwad','Gadag','Hassan','Haveri','Kalaburagi','Kodagu','Kolar','Koppal','Mandya','Mysuru','Raichur','Ramanagara',
+  'Shivamogga','Tumakuru','Udupi','Uttara Kannada','Vijayanagara','Vijayapura','Yadgir'];
+// Mock: where each college is (most partner colleges in Bengaluru, rest in big district towns) – from the name, no RNG change
+const MOCK_COL_DIST = ['Bengaluru Urban','Bengaluru Urban','Bengaluru Urban','Bengaluru Urban','Bengaluru Rural','Mysuru','Mysuru','Dakshina Kannada','Dharwad','Belagavi','Tumakuru','Shivamogga','Udupi','Davanagere','Kalaburagi'];
+COLLEGE_LIST.forEach(x=>{ let h=7; for (const ch of x.name) h=(h*131+ch.charCodeAt(0))>>>0; x.district = MOCK_COL_DIST[h % MOCK_COL_DIST.length]; });
 const SEAT_ST = {'Full':{c:'#dc2626',bg:'#fee2e2'},'Almost full':{c:'#d97706',bg:'#fef3c7'},'Open':{c:'#16a34a',bg:'#dcfce7'}};
 
 /* ---------------- State ---------------- */
@@ -1375,7 +1381,7 @@ function openCall(id){
       <div><label>Date & time</label>${fmtD(c.date)} 2026, ${c.time}</div>
       <div><label>Listened</label>${mmss(c.dur)} of ${mmss(SCRIPT_SEC)} (${pct(c.dur,SCRIPT_SEC)}%) · ${c.dur?(c.completed?'✔ Completed':'✖ Not completed'):'—'}</div>
       <div><label>Language chosen</label>${c.lang||'<span class="muted">— (Excel: '+c.cand.lang+')</span>'}</div>
-      <div><label>Course chosen on call</label>${c.courses&&c.courses.length>1?c.courses.map(shortDom).join(', '):c.chosenDom?shortDom(c.chosenDom):'<span class="muted">—</span>'}${c.suggested&&c.suggested.length?`<div style="margin-top:4px;font-size:12px">🏫 Suggested: ${c.suggested.map(esc).join(', ')}</div>`:''}
+      <div><label>Course chosen on call</label>${c.courses&&c.courses.length>1?c.courses.map(shortDom).join(', '):c.chosenDom?shortDom(c.chosenDom):'<span class="muted">—</span>'}${c.locality?`<div style="margin-top:4px;font-size:12px">📍 Wants: ${esc([c.locality.area,c.locality.district].filter(Boolean).join(', '))}</div>`:''}${c.suggested&&c.suggested.length?`<div style="margin-top:4px;font-size:12px">🏫 Suggested: ${c.suggested.map(esc).join(', ')}</div>`:''}
         ${c.chosenDom&&c.chosenDom!==c.excelDomain?`<div style="margin-top:4px"><span class="warn">⚠ Excel says ${shortDom(c.excelDomain)}</span></div>`:''}</div>
       <div><label>Last exam score</label>${c.cand.score}%</div>
       <div><label>College offered</label>${c.college||'<span class="muted">—</span>'}</div>
@@ -1789,6 +1795,9 @@ function openManual(qi, callId, candId){
   // chip-style single choice: hidden input keeps the value (read by saveManual)
   const rch = (id, arr, sel, after='') => `<input type="hidden" id="${id}" value="${esc(String(sel??''))}"><div class="rchips" data-for="${id}">${arr.map(([val,l])=>
       `<button type="button" class="btn${String(sel??'')===String(val)?' pri':''}" data-v="${esc(String(val))}" onclick="pickChip('${id}',this);${after}">${l}</button>`).join('')}</div>`;
+  // single-choice tick boxes (tick again to clear); hidden input keeps the value
+  const cbx = (id, arr, sel, after='') => `<input type="hidden" id="${id}" value="${esc(String(sel||''))}"><div class="rchips" style="gap:6px 16px">${arr.map(([val,l])=>
+      `<label style="display:inline-flex;gap:6px;align-items:center;font-size:14px;font-weight:400;width:auto;margin:0;color:inherit;cursor:pointer"><input type="checkbox" style="width:16px;height:16px;margin:0" data-g="${id}" data-v="${esc(val)}" ${String(sel||'')===String(val)?'checked':''} onchange="tickOne(this);${after}"> ${l}</label>`).join('')}</div>`;
   const box = document.getElementById('mcBox'); box.classList.add('wide');
   box.innerHTML = `
     <div style="display:flex;align-items:center"><h2 style="margin:0;font-size:18px">${c?'✎ Edit call':'📞 Log manual call'}</h2><button class="x" onclick="closeMc()">×</button></div>
@@ -1799,11 +1808,13 @@ function openManual(qi, callId, candId){
       <div><label>Time of call</label><input id="mTime" type="time" value="${v('time',tnow)}"></div>
       <div><label>Talk time (min)</label><input id="mDur" type="number" min="0" step="0.5" value="${c&&c.dur?(c.dur/60).toFixed(1):''}" placeholder="e.g. 3"></div>
       <div><label>Language spoken</label><select id="mLang">${opt(LANGS.map(l=>[l.n,l.n]), v('lang',cand.lang))}</select></div>
+      <div><label>Interest level</label><select id="mLvl">${opt([['','Not captured'],['3','High'],['2','Medium'],['1','Low'],['0','Not interested']], v('lvl',''))}</select></div>
+      <div><label>Preferred district (Karnataka)</label><select id="mDist" onchange="mcCtx.dist=this.value;renderColleges()"><option value="">Any district</option>${KA_DISTRICTS.map(d=>`<option ${c&&c.locality&&c.locality.district===d?'selected':''}>${d}</option>`).join('')}</select></div>
+      <div><label>Area / locality</label><input id="mArea" placeholder="e.g. Jayanagar, near home, hostel needed" value="${c&&c.locality?esc(c.locality.area||''):''}"></div>
       <div style="grid-column:1/-1"><label>Course discussed <span class="muted" style="font-weight:400">(tick one or more)</span></label><div id="mCourseBox"></div></div>
-      <div style="grid-column:1/-1"><label>Interest level</label>${rch('mLvl', [['','Not captured'],['3','High'],['2','Medium'],['1','Low'],['0','Not interested']], v('lvl',''))}</div>
       <div style="grid-column:1/-1"><label>Candidate's message / query</label><textarea id="mMsg" rows="2" placeholder="What did the student or parent say? e.g. wants colleges near home, fees under 1.5 L…">${c&&c.query?esc(c.query.text):''}</textarea></div>
-      <div style="grid-column:1/-1"><label>Reverted back</label>${rch('mRev', [['','No'],['Call back','Call back'],['WhatsApp reply','WhatsApp'],['SMS reply','SMS']], c&&c.reverted?c.revertVia:'')}</div>
-      <div style="grid-column:1/-1"><label>Admission status</label>${rch('mAdm', ['Not converted','In process','Joined','Dropped'].map(a=>[a,a]), v('admission','Not converted')==='N/A'?'Not converted':v('admission','Not converted'), "document.getElementById('mColW').style.display=['Joined','In process','Dropped'].includes(document.getElementById('mAdm').value)?'':'none'")}</div>
+      <div style="grid-column:1/-1"><label>Reverted back <span class="muted" style="font-weight:400">(leave empty = No)</span></label>${cbx('mRev', [['Call back','Call back'],['WhatsApp reply','WhatsApp'],['SMS reply','SMS']], c&&c.reverted?c.revertVia:'')}</div>
+      <div style="grid-column:1/-1"><label>Admission status <span class="muted" style="font-weight:400">(leave empty = Not converted)</span></label>${cbx('mAdm', ['In process','Joined','Dropped'].map(a=>[a,a]), ['In process','Joined','Dropped'].includes(v('admission',''))?v('admission',''):'', "document.getElementById('mColW').style.display=document.getElementById('mAdm').value?'':'none'")}</div>
       <div id="mColW" style="grid-column:1/-1;${['Joined','In process','Dropped'].includes(v('admission',''))?'':'display:none'}"><label>College</label><select id="mCol" onchange="mcCtx.college=this.value"></select></div>
       <div style="grid-column:1/-1"><label>Counsellor notes</label><textarea id="mNotes" rows="2" placeholder="Next step, call-back time…">${c?esc(c.notes||''):''}</textarea></div>
     </div></div>
@@ -1815,10 +1826,14 @@ function openManual(qi, callId, candId){
   const d0 = DOMAINS.find(d=>d.id===start[0]) || COURSES[0];
   mcCtx.ticks = new Set(start); mcCtx.lv = d0.lv; mcCtx.stream = d0.lv==='pu' ? (d0.grp ? 'sci' : 'com') : null;
   mcCtx.college = c && c.college;
-  mcCtx.sug = new Set((c && c.suggested) || []);
+  mcCtx.sug = new Set((c && c.suggested) || []); mcCtx.dist = (c && c.locality && c.locality.district) || '';
   mcCtx.f = mcCtx.f || {fee:'', fit:true, open:true, sort:'rec'};
   renderCourseBox();
   document.getElementById('mcModal').classList.add('on');
+}
+function tickOne(cb){
+  document.querySelectorAll(`input[data-g="${cb.dataset.g}"]`).forEach(x=>{ if (x!==cb) x.checked=false; });
+  document.getElementById(cb.dataset.g).value = cb.checked ? cb.dataset.v : '';
 }
 function pickChip(id, btn){
   document.getElementById(id).value = btn.dataset.v;
@@ -1832,6 +1847,9 @@ function renderColleges(){
   if (!ids.length){ el.innerHTML = '<div class="muted" style="font-size:13px;margin-top:30px;text-align:center">🏫 Tick a course on the left to see matching colleges.</div>'; return; }
   let rows = COLLEGE_LIST.filter(x=>ids.includes(x.domain)).map(seatRow).map(r=>({...r, fits: score>=r.minScore}));
   const all = rows.length;
+  const inDist = mcCtx.dist ? rows.filter(r=>r.district===mcCtx.dist) : rows;
+  if (mcCtx.dist && inDist.length) rows = inDist;
+  const distNote = mcCtx.dist ? (inDist.length ? '' : `<div class="note" style="margin:0 0 8px;font-size:12px">No partner college in <b>${esc(mcCtx.dist)}</b> for this course yet – showing all districts.</div>`) : '';
   if (f.fee) rows = rows.filter(r=>r.fee<=+f.fee);
   if (f.fit) rows = rows.filter(r=>r.fits);
   if (f.open) rows = rows.filter(r=>r.rem>0);
@@ -1840,16 +1858,20 @@ function renderColleges(){
   const rec = new Set(rows.filter(r=>r.fits && r.rem>0).slice(0,3).map(r=>r.name));
   const sel = (k,arr) => `<select style="width:auto;padding:4px 6px;font-size:13px" onchange="mcCtx.f.${k}=this.value;renderColleges()">${arr.map(([v,l])=>`<option value="${v}" ${String(f[k])===String(v)?'selected':''}>${l}</option>`).join('')}</select>`;
   const tick = (k,l) => `<label style="display:inline-flex;gap:5px;align-items:center;font-size:13px;font-weight:400;width:auto;margin:0;color:inherit"><input type="checkbox" style="width:15px;height:15px;margin:0" ${f[k]?'checked':''} onchange="mcCtx.f.${k}=this.checked;renderColleges()"> ${l}</label>`;
+  const seatsLeft = rows.reduce((a,r)=>a+r.rem,0), openN = rows.filter(r=>r.st==='Open').length, almost = rows.filter(r=>r.st==='Almost full').length, full = rows.filter(r=>r.st==='Full').length;
+  const cheapest = rows.length ? Math.min(...rows.map(r=>r.fee)) : 0;
+  const summary = rows.length ? `<div class="note" style="margin:0 0 8px;font-size:13px;background:#eef2ff;color:#3730a3">
+      <b>${rows.length} college${rows.length>1?'s':''}</b>${mcCtx.dist&&inDist.length?' in '+esc(mcCtx.dist):''} · <b>${seatsLeft} seats pending</b> for our students (${[openN&&openN+' open', almost&&almost+' almost full', full&&full+' full'].filter(Boolean).join(', ')}).<br>Fees from ₹${cheapest.toFixed(2)} L/yr.${rows[0]?` Best match: <b>${esc(rows[0].name)}</b> (${rows[0].rem} seats left).`:''}</div>` : '';
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px"><b>🏫 Colleges for ${ids.map(shortDom).join(', ')}</b><span class="sp"></span><span class="muted" style="font-size:12px">${rows.length} of ${all}</span></div>
     <div style="display:flex;gap:8px 12px;flex-wrap:wrap;align-items:center;margin:8px 0 10px">
       ${sel('fee',[['','Any fee'],['1','≤ ₹1 L/yr'],['1.5','≤ ₹1.5 L/yr'],['2','≤ ₹2 L/yr'],['3','≤ ₹3 L/yr'],['5','≤ ₹5 L/yr']])}
       ${sel('sort',[['rec','⭐ Recommended first'],['fee','Lowest fee'],['seats','Most seats left']])}
-      ${tick('fit','Fits score ('+score+'%)')} ${tick('open','Seats open')}</div>
+      ${tick('fit','Fits score ('+score+'%)')} ${tick('open','Seats open')}</div>${distNote}${summary}
     <div style="max-height:52vh;overflow:auto">${rows.length ? rows.map(r=>`
       <div class="colrow${mcCtx.sug.has(r.name)?' sug':''}${r.fits?'':' dim'}">
         <input type="checkbox" title="Suggested to the candidate" style="width:16px;height:16px;margin:0" ${mcCtx.sug.has(r.name)?'checked':''} onchange="this.checked?mcCtx.sug.add(this.dataset.n):mcCtx.sug.delete(this.dataset.n);renderColleges();renderCourseBox(true)" data-n="${esc(r.name)}">
-        <div><b>${rec.has(r.name)?'⭐ ':''}${esc(r.name)}</b><div class="muted" style="font-size:12px">${shortDom(r.domain)} · Min score ${r.minScore}%${r.fits?'':' <span style="color:#dc2626">(above candidate)</span>'}</div></div>
+        <div><b>${rec.has(r.name)?'⭐ ':''}${esc(r.name)}</b><div class="muted" style="font-size:12px">📍 ${r.district} · ${shortDom(r.domain)} · Min score ${r.minScore}%${r.fits?'':' <span style="color:#dc2626">(above candidate)</span>'}</div></div>
         <div style="text-align:right"><b>₹${r.fee.toFixed(2)} L</b><span class="muted">/yr</span><div><span class="pill" style="color:${SEAT_ST[r.st].c};background:${SEAT_ST[r.st].bg}">${r.rem} seats · ${r.st}</span></div></div>
       </div>`).join('') : '<div class="muted" style="font-size:13px">No college matches these filters. Try a higher fee limit or untick "Fits score".</div>'}</div>
     <div class="muted" style="font-size:12px;margin-top:6px">⭐ = best fit (score fits, seats open, lower fee). Tick a college to mark it as <b>suggested</b> to the candidate – it is saved with the call and listed first under Admission › College. Fees, seats and minimum scores are mock values.</div>`;
@@ -1892,14 +1914,14 @@ function saveManual(){
   if (c.manual) c.by = c.by || by;
   c.editedBy = by;
   Object.assign(c, { status:st, time:g('mTime'), dur:Math.round(durMin*60), lang: st==='answered'||st==='disconnected' ? g('mLang') : null,
-    courses: st==='answered' ? courses : c.courses, suggested: [...mcCtx.sug],
+    courses: st==='answered' ? courses : c.courses, suggested: [...mcCtx.sug], locality: (g('mDist')||g('mArea').trim()) ? {district:g('mDist'), area:g('mArea').trim()} : (c.locality||null),
     chosenDom: st==='answered' ? dom : c.chosenDom, domain: st==='answered' ? dom : c.domain, lvl: lvl===''?null:+lvl,
     notes: g('mNotes'), reverted: !!g('mRev'), revertVia: g('mRev')||null, revertDate: g('mRev') ? (c.revertDate||TODAY) : null,
     reply: g('mRev') ? (c.reply||'Logged by counsellor') : null });
   if (c.manual) c.key = null;
   const msg = g('mMsg').trim();
   c.query = msg ? {tag:'Counsellor note', text:msg, at:0, len:0, manual:true} : (c.manual ? null : c.query);
-  const adm = g('mAdm');
+  const adm = g('mAdm') || 'Not converted';
   c.admission = (st==='not_picked'||st==='rejected') && adm==='Not converted' ? 'N/A' : adm;
   if (['Joined','In process','Dropped'].includes(c.admission)){ c.college = g('mCol'); if (!c.revertDate) c.revertDate = TODAY; }
   if (c.admission==='Joined') makeEvidence(c);
