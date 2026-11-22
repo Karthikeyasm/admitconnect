@@ -303,7 +303,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 16:55 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:15 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -1688,7 +1688,7 @@ function renderSettings(v){
       <div><label>Parallel calls</label><select><option>1 (one by one)</option><option>5</option><option>10</option></select></div>
     </div><div style="margin-top:14px"><button class="btn pri" onclick="toast('Settings saved (demo only)')">Save settings</button></div></div>
 
-    <div class="card mini"><h3>👥 Accounts <small>· from the database – approve and set roles</small></h3><div id="acctList" class="muted">Loading…</div></div>
+    <div class="card mini"><div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0">👥 Accounts <small>· created by admins only</small></h3><span class="sp"></span><button class="btn pri" onclick="openAddUser()">➕ Add user</button></div><div id="acctList" class="muted" style="margin-top:10px">Loading…</div></div>
     <div class="card mini"><h3>👥 Users & roles <small>· mock</small></h3>
       <table><thead><tr><th>User</th><th>Role</th><th>Access</th></tr></thead><tbody>
         <tr><td>${profile.name||'Admin User'}</td><td><span class="role" style="background:#ede9fe;color:#5b21b6">Administrator</span></td><td>Everything + Admin section (analytics, seats & fees, settings)</td></tr>
@@ -1696,7 +1696,7 @@ function renderSettings(v){
         <tr><td>Counsellor 2</td><td><span class="role" style="background:#e0f2fe;color:#075985">Counsellor</span></td><td>Same as Counsellor 1</td></tr>
         <tr><td>${myCollege}</td><td><span class="role" style="background:#ccfbf1;color:#115e59">College partner</span></td><td>Own seat dashboard + basic settings only</td></tr>
       </tbody></table>
-      <div style="margin-top:10px"><button class="btn" onclick="toast('Add user: Phase 2')">+ Add user</button></div></div>
+      <div style="margin-top:10px"><button class="btn" onclick="openAddUser()">+ Add user</button></div></div>
     <div class="card"><h3>🏫 College partner access</h3><div class="set">
       <div style="grid-column:1/-1"><label>College shown in the College partner view (demo)</label><select onchange="myCollege=this.value;toast('College partner view will show '+this.value)">${collegeOptions(myCollege)}</select></div>
     </div><div class="muted" style="font-size:12px;margin-top:8px">A live system gives each college its own login that only shows its own seats.</div></div>`:''}
@@ -1849,6 +1849,10 @@ const sbStorage = {
   setItem(k,v){ try { (this.remember() ? localStorage : sessionStorage).setItem(k,v); } catch(e){} },
   removeItem(k){ try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch(e){} }
 };
+// Set-password links from emails arrive as ...#access_token=…&type=invite|recovery (or #error=…&error_description=…)
+const AUTH_HASH = new URLSearchParams(location.hash.replace(/^#/, ''));
+const AUTH_LINK = AUTH_HASH.get('type');                          // 'invite' | 'recovery' | null
+const AUTH_ERR  = AUTH_HASH.get('error_description');             // e.g. link expired
 let sb = null;
 try {
   if (window.supabase && window.supabase.createClient)
@@ -1866,46 +1870,144 @@ let authMode = 'login';
 const esc = t => String(t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function renderAuth(mode, msg, isErr){
   authMode = mode || authMode;
-  // Online, nobody can register as Administrator – an admin approves accounts instead.
-  const roleOpts = ROLES.filter(([id])=>!(sb && id==='admin')).map(([id,k,ic])=>`<option value="${id}" ${id==='counsellor'?'selected':''}>${ic} ${T(k)}</option>`).join('');
-  document.getElementById('auth').innerHTML = `<div class="abox">
-    <div class="abrand"><h1>Admit<span>Connect</span></h1>
-      <div>Admission counselling · bot calls · WhatsApp/SMS follow-ups</div>
-      <ul style="padding-left:18px;margin:6px 0"><li>Bot calls every student on your course lists</li><li>Track interest, replies and admissions with proof</li><li>Colleges see their own seat status</li></ul>
-      <div style="margin-top:auto;font-size:12px;color:#94a3b8">${sb?'Secure login':'Offline demo'} · <span id="verStampA"></span></div></div>
-    <div class="aform">
-      <div class="atabs"><button class="${authMode==='login'?'on':''}" onclick="renderAuth('login')">Log in</button><button class="${authMode==='register'?'on':''}" onclick="renderAuth('register')">Register</button></div>
-      ${msg?`<div class="note" style="margin:0 0 12px;${isErr?'background:#fef2f2;color:#991b1b':'background:#ecfdf5;color:#065f46'}">${msg}</div>`:''}
-      ${authMode==='login' ? `
+  const note = (m,err)=> m?`<div class="note" style="margin:0 0 12px;${err?'background:#fef2f2;color:#991b1b':'background:#ecfdf5;color:#065f46'}">${m}</div>`:'';
+  let body = '';
+  if (authMode==='login') body = `
+      <h2 style="margin:0 0 14px;font-size:20px">Log in</h2>${note(msg,isErr)}
       <form onsubmit="event.preventDefault();doLogin()">
         <div class="afield"><label>${sb?'Email ID':'Email or phone number'}</label><input id="lId" autocomplete="username" placeholder="${sb?'name@example.com':'name@example.com or 98XXXXXXXX'}"></div>
         <div class="afield"><label>Password</label><input id="lPw" type="password" autocomplete="current-password" placeholder="Your password"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:-2px 0 10px">
           <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="lRem" checked> Keep me logged in</label>
-          <span class="alink" onclick="toast('Password reset is coming soon. For now, ask your administrator to reset it.')">Forgot password?</span></div>
+          <span class="alink" onclick="renderAuth('first')">First-time login / Forgot password?</span></div>
         <div class="aerr" id="lErr"></div>
         <button class="abtn" type="submit" id="lBtn">Log in</button>
       </form>
-      <div style="text-align:center;font-size:13px;margin-top:12px">New here? <span class="alink" onclick="renderAuth('register')">Create an account</span></div>
-      <div style="text-align:center;margin-top:10px"><span class="alink" style="font-size:13px" onclick="demoLogin()">Continue as demo user (Admin, mock data) →</span></div>` : `
-      <form onsubmit="event.preventDefault();doRegister()">
-        <div class="afield"><label>Full name</label><input id="rName" autocomplete="name" placeholder="e.g. Karthik S"></div>
-        <div class="afield"><label>Email ID</label><input id="rEmail" type="email" autocomplete="email" placeholder="name@example.com"></div>
-        <div class="afield"><label>Phone number</label><div style="display:flex;gap:6px"><input value="+91" disabled style="width:64px;text-align:center"><input id="rPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"></div></div>
-        <div class="afield"><label>Role</label><select id="rRole" onchange="document.getElementById('rColWrap').style.display=this.value==='college'?'':'none'">${roleOpts}</select></div>
-        <div class="afield" id="rColWrap" style="display:none"><label>College</label><select id="rCol">${collegeOptions(myCollege)}</select></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="afield"><label>Password</label><input id="rPw" type="password" autocomplete="new-password" placeholder="Min 8, letters + numbers"></div>
-          <div class="afield"><label>Confirm password</label><input id="rPw2" type="password" autocomplete="new-password" placeholder="Repeat password"></div></div>
-        <div class="aerr" id="rErr"></div>
-        <button class="abtn" type="submit" id="rBtn">Create account</button>
-      </form>
-      <div style="text-align:center;font-size:13px;margin-top:12px">Already registered? <span class="alink" onclick="renderAuth('login')">Log in</span></div>`}
-      <div class="anote">${sb ? 'Accounts are stored securely in the AdmitConnect database. New accounts are activated by an administrator.'
+      <div class="muted" style="text-align:center;font-size:13px;margin-top:12px">No account? Accounts are created by your administrator.</div>
+      <div style="text-align:center;margin-top:10px"><span class="alink" style="font-size:13px" onclick="demoLogin()">Continue as demo user (Admin, mock data) →</span></div>`;
+  else if (authMode==='first') body = `
+      <h2 style="margin:0 0 6px;font-size:20px">First-time login / Forgot password</h2>
+      <div class="muted" style="font-size:13px;margin-bottom:14px">${sb?'Enter the email ID your administrator registered. We\'ll email you a link to set your password (valid for a limited time).'
+                                                                : 'Offline demo: ask your administrator for your temporary password, then log in with it – you\'ll be asked to set your own password.'}</div>${note(msg,isErr)}
+      ${sb?`<form onsubmit="event.preventDefault();doFirst()">
+        <div class="afield"><label>Email ID</label><input id="fEmail" type="email" autocomplete="email" placeholder="name@example.com"></div>
+        <div class="aerr" id="fErr"></div>
+        <button class="abtn" type="submit" id="fBtn">Email me a set-password link</button></form>`:''}
+      <div style="text-align:center;font-size:13px;margin-top:12px"><span class="alink" onclick="renderAuth('login')">← Back to log in</span></div>`;
+  else if (authMode==='setpw') body = `
+      <h2 style="margin:0 0 6px;font-size:20px">Set your password</h2>
+      <div class="muted" style="font-size:13px;margin-bottom:14px">${msg||'Create the password you will use to log in from now on.'}</div>
+      <form onsubmit="event.preventDefault();doSetPw()">
+        <div class="afield"><label>New password</label><input id="sPw" type="password" autocomplete="new-password" placeholder="Min 8, letters + numbers"></div>
+        <div class="afield"><label>Confirm new password</label><input id="sPw2" type="password" autocomplete="new-password" placeholder="Repeat password"></div>
+        <div class="aerr" id="sErr"></div>
+        <button class="abtn" type="submit" id="sBtn">Save password and continue</button></form>`;
+  document.getElementById('auth').innerHTML = `<div class="abox">
+    <div class="abrand"><h1>Admit<span>Connect</span></h1>
+      <div>Admission counselling · bot calls · WhatsApp/SMS follow-ups</div>
+      <ul style="padding-left:18px;margin:6px 0"><li>Bot or manual calls for every student on your course lists</li><li>Track interest, replies and admissions with proof</li><li>Colleges see their own seat status</li></ul>
+      <div style="margin-top:auto;font-size:12px;color:#94a3b8">${sb?'Secure login':'Offline demo'} · <span id="verStampA"></span></div></div>
+    <div class="aform">${body}
+      <div class="anote">${sb ? 'Accounts are created by an administrator. You receive an email to set your password.'
                               : 'Offline demo: accounts are saved in this browser only. Don\'t use a real password.'}</div>
     </div></div>`;
   const vs = document.getElementById('verStamp'); if (vs) document.getElementById('verStampA').textContent = vs.textContent;
   document.getElementById('auth').classList.add('on');
+}
+const pwOk = pw => pw.length>=8 && /[A-Za-z]/.test(pw) && /\d/.test(pw);
+let pendingLocal = null;   // offline: user who must replace a temporary password
+// Send a set-password link (first login, expired invite, or forgotten password)
+async function doFirst(){
+  const email = document.getElementById('fEmail').value.trim().toLowerCase(), err = document.getElementById('fErr');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ err.textContent='Please enter a valid email ID.'; return; }
+  busy('fBtn', true, 'Sending…');
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+    if (error){ err.textContent = /rate/i.test(error.message) ? 'Too many emails sent. Please wait and try again.' : 'Could not send the link: '+error.message; return; }
+    renderAuth('login', `✔ If <b>${esc(email)}</b> has an account, a set-password link is on its way. Check your inbox (and spam).`);
+  } catch(e){ err.textContent='Network problem – please try again.'; }
+  finally { busy('fBtn', false, 'Email me a set-password link'); }
+}
+// Save the new password (after an email link, or after an offline temporary password)
+async function doSetPw(){
+  const pw = document.getElementById('sPw').value, pw2 = document.getElementById('sPw2').value, err = document.getElementById('sErr');
+  if (!pwOk(pw)){ err.textContent='Password must be at least 8 characters with letters and numbers.'; return; }
+  if (pw!==pw2){ err.textContent='The two passwords do not match.'; return; }
+  if (pendingLocal){
+    const users = getUsers(), u = users.find(x=>x.id===pendingLocal.id);
+    u.pw = await hashPw(pw); u.mustChange = false; saveUsers(users); pendingLocal = null;
+    store.set('session', {uid:u.id}); startSession(u); toast('Password saved'); return;
+  }
+  busy('sBtn', true, 'Saving…');
+  try {
+    const { data, error } = await sb.auth.updateUser({ password: pw });
+    if (error){ err.textContent = 'Could not save the password: '+error.message; return; }
+    history.replaceState(null, '', location.pathname + location.search);
+    toast('Password saved'); await enterWithSupabaseUser(data.user);
+  } catch(e){ err.textContent='Network problem – please try again.'; }
+  finally { busy('sBtn', false, 'Save password and continue'); }
+}
+
+/* ---------- Admin: add a user (no self-registration) ---------- */
+function openAddUser(){
+  document.getElementById('mcBox').innerHTML = `
+    <div style="display:flex;align-items:center"><h2 style="margin:0;font-size:18px">➕ Add user</h2><button class="x" onclick="document.getElementById('mcModal').classList.remove('on')">×</button></div>
+    <div class="muted" style="margin:4px 0 12px;font-size:13px">${sb&&isDbAdmin()?'The person receives an email with a link to set their own password.':'Offline / demo: a temporary password is created – share it; they must change it at first login.'}</div>
+    <div class="set">
+      <div><label>Full name</label><input id="aName" placeholder="e.g. Anush G N"></div>
+      <div><label>Email ID</label><input id="aEmail" type="email" placeholder="name@example.com"></div>
+      <div><label>Phone number</label><input id="aPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div>
+      <div><label>Role</label><select id="aRole" onchange="document.getElementById('aColW').style.display=this.value==='college'?'':'none'"><option value="counsellor">🎧 Counsellor</option><option value="college">🏫 College partner</option><option value="admin">🛡 Admin</option></select></div>
+      <div id="aColW" style="grid-column:1/-1;display:none"><label>College</label><select id="aCol">${collegeOptions(myCollege)}</select></div>
+      <div><label>Employee ID (optional)</label><input id="aEmp" placeholder="e.g. CN-021"></div>
+      <div><label>Calling mode (counsellors)</label><select id="aMode"><option value="auto">🤖 Automatic</option><option value="manual">✍ Manual</option></select></div>
+    </div>
+    <div class="aerr" id="aErr"></div><div id="aOut"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" onclick="document.getElementById('mcModal').classList.remove('on')">Close</button><button class="btn pri" id="aBtn" onclick="addUser()">Create account &amp; send invite</button></div>`;
+  document.getElementById('mcModal').classList.add('on');
+}
+async function addUser(){
+  const v = id => document.getElementById(id).value.trim(), err = m => (document.getElementById('aErr').textContent = m, false);
+  const name=v('aName'), email=v('aEmail').toLowerCase(), phone=v('aPhone').replace(/\D/g,''), rl=v('aRole'), college = rl==='college'?v('aCol'):null, emp=v('aEmp')||null, mode=v('aMode');
+  if (name.length<2) return err('Please enter the full name.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return err('Please enter a valid email ID.');
+  if (!/^[6-9]\d{9}$/.test(phone)) return err('Phone must be a 10-digit Indian mobile number (starts with 6–9).');
+  err('');
+  if (sb && isDbAdmin()){
+    busy('aBtn', true, 'Creating…');
+    try {
+      const { data, error } = await sb.functions.invoke('invite-user', { body: { full_name:name, email, phone, role:rl, college, employee_id:emp, redirect_to: location.origin + location.pathname } });
+      if (error){
+        let m = error.message || String(error);
+        try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch(e){}
+        if (/Failed to send a request|not found|404/i.test(m)) m = 'The "invite-user" function is not set up in Supabase yet – see SETUP.md in the GitHub repository.';
+        return err('Could not create the account: '+m);
+      }
+      if (rl==='counsellor' && data && data.user_id){ callModes['U-'+data.user_id.slice(0,6)] = mode; store.set('callModes', callModes); }
+      document.getElementById('aOut').innerHTML = `<div class="note" style="background:#ecfdf5;color:#065f46">✔ Account created for <b>${esc(name)}</b>. An email with a set-password link was sent to <b>${esc(email)}</b>.</div>`;
+      loadAccounts();
+    } catch(e){ err('Network problem – please try again.'); }
+    finally { busy('aBtn', false, 'Create account & send invite'); }
+    return;
+  }
+  if (sb && !isDbAdmin()) return err('Log in with a real admin account (not the demo user) to create database accounts.');
+  // offline demo: local account with a temporary password that must be changed at first login
+  const users = getUsers();
+  if (users.some(u=>u.email===email)) return err('An account with this email already exists.');
+  if (users.some(u=>u.phone===phone)) return err('An account with this phone number already exists.');
+  const temp = 'AC-' + Math.random().toString(36).slice(2,6).toUpperCase() + Math.floor(1000+Math.random()*9000);
+  const u = {id: emp || ('U'+String(users.length+1).padStart(3,'0')), name, email, phone, role:rl, college, pw: await hashPw(temp), mustChange:true, created:new Date().toISOString()};
+  users.push(u); saveUsers(users);
+  if (rl==='counsellor'){ callModes[u.id] = mode; store.set('callModes', callModes); }
+  const mail = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent('Your AdmitConnect account')}&body=${encodeURIComponent(`Hi ${name},\n\nAn AdmitConnect account has been created for you.\nLink: ${location.origin+location.pathname}\nEmail: ${email}\nTemporary password: ${temp}\n\nYou will be asked to set your own password the first time you log in.`)}`;
+  document.getElementById('aOut').innerHTML = `<div class="note" style="background:#ecfdf5;color:#065f46">✔ Account created. Temporary password: <b style="font-family:monospace;font-size:15px">${temp}</b>
+    <div style="margin-top:6px"><a href="${mail}">✉ Open an email to ${esc(email)}</a> · <span class="alink" onclick="navigator.clipboard&&navigator.clipboard.writeText('${temp}').then(()=>toast('Copied'),()=>toast('Copy not allowed here'))">Copy password</span></div>
+    <div class="muted" style="font-size:12px;margin-top:4px">Offline demo: works only in this browser. The person must change it at first login.</div></div>`;
+  renderAll();
+}
+async function sendSetPwLink(email){
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  toast(error ? 'Could not send: '+error.message : '✉ Set-password link sent to '+email);
 }
 function busy(id, on, label){ const b=document.getElementById(id); if (b){ b.disabled=on; b.textContent=label; } }
 
@@ -1992,13 +2094,14 @@ async function setAccount(id, field, val){
 }
 async function loadAccounts(){
   const el = document.getElementById('acctList'); if (!el) return;
-  if (!isDbAdmin()){ el.innerHTML = '<div class="muted" style="font-size:13px">Log in with a real admin account (not the demo user) to manage database accounts.</div>'; return; }
+  if (!isDbAdmin()){ const lu=getUsers(); el.innerHTML = `<div class="muted" style="font-size:13px">${sb?'Log in with a real admin account (not the demo user) to manage database accounts.':'Offline demo accounts in this browser:'}</div>`+(!sb&&lu.length?`<table><thead><tr><th>Name</th><th>Email · Phone</th><th>Role</th><th>Status</th></tr></thead><tbody>${lu.map(u=>`<tr style="cursor:default"><td>${esc(u.name)}</td><td style="font-size:12px">${esc(u.email)}<br>${esc(u.phone)}</td><td>${u.role}</td><td>${u.mustChange?'<b style="color:#d97706">Temporary password</b>':'Active'}</td></tr>`).join('')}</tbody></table>`:''); return; }
   const { data, error } = await sb.from('profiles').select('id,full_name,email,phone,role,college,approved,created_at').order('created_at');
   if (error){ el.innerHTML = `<div class="aerr">Could not load accounts: ${esc(error.message)}</div>`; return; }
-  el.innerHTML = `<table><thead><tr><th>Name</th><th>Email · Phone</th><th>Role</th><th>Approved</th></tr></thead><tbody>${(data||[]).map(u=>`<tr style="cursor:default">
+  el.innerHTML = `<table><thead><tr><th>Name</th><th>Email · Phone</th><th>Role</th><th>Active</th><th></th></tr></thead><tbody>${(data||[]).map(u=>`<tr style="cursor:default">
     <td><b>${esc(u.full_name)}</b>${u.id===sbMe.id?' <span class="muted">(you)</span>':''}</td><td style="font-size:12px">${esc(u.email)}<br>${esc(u.phone||'')}</td>
     <td><select id="ac_${u.id}" ${u.id===sbMe.id?'disabled':''} onchange="setAccount('${u.id}','role',this.value)">${[['counsellor','🎧 Counsellor'],['college','🏫 College'],['admin','🛡 Admin']].map(([v,l])=>`<option value="${v}" ${v===u.role?'selected':''}>${l}</option>`).join('')}</select></td>
-    <td>${u.id===sbMe.id?'✔':`<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" ${u.approved?'checked':''} onchange="setAccount('${u.id}','approved',this.checked)"> ${u.approved?'Yes':'<b style="color:#dc2626">Waiting</b>'}</label>`}</td></tr>`).join('')}</tbody></table>`;
+    <td>${u.id===sbMe.id?'✔':`<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" ${u.approved?'checked':''} onchange="setAccount('${u.id}','approved',this.checked)"> ${u.approved?'Yes':'<b style="color:#dc2626">Waiting</b>'}</label>`}</td>
+    <td>${u.id===sbMe.id?'':`<span class="alink" style="font-size:12px" onclick="sendSetPwLink('${esc(u.email)}')">✉ Send set-password link</span>`}</td></tr>`).join('')}</tbody></table>`;
 }
 
 // Load the logged-in user's profile row and open the app (or explain why not)
@@ -2046,6 +2149,7 @@ async function doLogin(){
   const idv = raw.toLowerCase().replace(/^\+91/,'');
   const u = getUsers().find(x=>x.email===idv || x.phone===idv.replace(/\D/g,''));
   if (!u || u.pw !== await hashPw(pw)){ errEl.textContent = 'Email/phone or password is incorrect.'; return; }
+  if (u.mustChange){ pendingLocal = u; renderAuth('setpw', 'You logged in with a temporary password. Please create your own password now.'); return; }
   store.set('session', rem ? {uid:u.id} : null);
   try { sessionStorage.setItem('ac_session', JSON.stringify({uid:u.id})); } catch(e){}
   startSession(u);
@@ -2069,9 +2173,14 @@ async function logout(){
 }
 async function checkSession(){
   if (sb){
+    if (AUTH_ERR){ history.replaceState(null,'',location.pathname+location.search);
+      renderAuth('first', 'That link has expired or was already used. Enter your email to get a new one.', true); return; }
+    sb.auth.onAuthStateChange(ev => { if (ev==='PASSWORD_RECOVERY') renderAuth('setpw'); });
     try {
       const { data } = await sb.auth.getSession();
-      if (data && data.session && data.session.user){ await enterWithSupabaseUser(data.session.user); return; }
+      if (data && data.session && data.session.user){
+        if (AUTH_LINK==='invite' || AUTH_LINK==='recovery'){ renderAuth('setpw', AUTH_LINK==='invite' ? 'Welcome! Create the password you will use to log in.' : 'Choose a new password.'); return; }
+        await enterWithSupabaseUser(data.session.user); return; }
     } catch(e){ console.warn('[AdmitConnect] session check failed', e); }
     renderAuth('login'); return;
   }
