@@ -3,7 +3,8 @@
 // and lets the admin hand the role over to someone else later.
 //
 // POST { action: "status" }                          → { needs_setup: true|false }        (public)
-// POST { action: "create_admin", full_name, email, phone, setup_code, redirect_to }       (public, only while no admin exists)
+// POST { action: "verify_code", email, setup_code }  → { ok } if the admin code is right  (public, only while no admin exists)
+// POST { action: "create_admin", email, setup_code, full_name, password } → admin created (public, only while no admin exists)
 // POST { action: "transfer", to_user_id }            → current admin becomes counsellor,   (logged-in admin only)
 //                                                       chosen user becomes the one admin
 // Deploy with "Verify JWT" OFF (the first admin has no login yet). Secret needed: ADMIN_SETUP_CODE.
@@ -16,7 +17,6 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
-const ALLOWED_REDIRECTS = ["https://karthikeyasm.github.io/admitconnect/"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -33,31 +33,41 @@ Deno.serve(async (req) => {
     // ---- 1. Does the site still need its first admin? ----
     if (b.action === "status") return json({ needs_setup: (await adminCount()) === 0 });
 
-    // ---- 2. Create the first admin (only while none exists, only with the setup code) ----
-    if (b.action === "create_admin") {
-      if ((await adminCount()) > 0) return json({ error: "An admin already exists. Ask them to add you, or use Forgot password." }, 409);
+    // ---- 2. First login: check the admin code, then create the admin with the chosen password ----
+    const checkCode = async () => {
+      if ((await adminCount()) > 0) return json({ error: "An admin already exists. Please log in, or ask the admin to add you." }, 409);
       const code = Deno.env.get("ADMIN_SETUP_CODE") || "";
-      if (!code) return json({ error: "Setup is locked: ADMIN_SETUP_CODE is not configured in Supabase." }, 503);
-      if (String(b.setup_code || "") !== code) return json({ error: "The setup code is incorrect." }, 403);
-      const fullName = String(b.full_name || "").trim(), email = String(b.email || "").trim().toLowerCase(), phone = String(b.phone || "").replace(/\D/g, "");
-      if (fullName.length < 2) return json({ error: "Full name is required." }, 400);
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ error: "Invalid email ID." }, 400);
-      if (!/^[6-9]\d{9}$/.test(phone)) return json({ error: "Phone must be a 10-digit Indian mobile number." }, 400);
-      const redirectTo = ALLOWED_REDIRECTS.includes(b.redirect_to) ? b.redirect_to : ALLOWED_REDIRECTS[0];
+      if (!code) return json({ error: "The admin code has not been set on the server yet." }, 503);
+      if (String(b.setup_code || "") !== code) {
+        await new Promise((r) => setTimeout(r, 1500));            // slow down guessing
+        return json({ error: "The admin code is incorrect." }, 403);
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(b.email || ""))) return json({ error: "Invalid email ID." }, 400);
+      return null;
+    };
+    if (b.action === "verify_code") return (await checkCode()) ?? json({ ok: true });
 
-      // Existing user with this email → promote; otherwise invite (email with set-password link)
-      let userId: string | null = null;
-      const { data: inv, error: invErr } = await db.auth.admin.inviteUserByEmail(email, { data: { full_name: fullName, phone, role: "admin" }, redirectTo });
-      if (invErr) {
-        if (!/already/i.test(invErr.message)) return json({ error: invErr.message }, 400);
+    if (b.action === "create_admin") {
+      const bad = await checkCode(); if (bad) return bad;
+      const email = String(b.email).trim().toLowerCase(), fullName = String(b.full_name || "").trim(), pw = String(b.password || "");
+      if (fullName.length < 2) return json({ error: "Full name is required." }, 400);
+      if (pw.length < 8 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)) return json({ error: "Password must be at least 8 characters with letters and numbers." }, 400);
+
+      // New user → create with the chosen password (email counts as confirmed: the admin code proves who they are).
+      // Existing user with this email → set the password and promote.
+      let userId: string;
+      const { data: cu, error: cErr } = await db.auth.admin.createUser({ email, password: pw, email_confirm: true, user_metadata: { full_name: fullName, role: "admin" } });
+      if (cErr) {
+        if (!/already/i.test(cErr.message)) return json({ error: cErr.message }, 400);
         const { data: p } = await db.from("profiles").select("id").eq("email", email).single();
         if (!p) return json({ error: "This email exists but has no profile. Contact support." }, 400);
         userId = p.id;
-        await db.auth.resetPasswordForEmail(email, { redirectTo });   // send a set-password link anyway
-      } else userId = inv.user.id;
+        const { error: uErr } = await db.auth.admin.updateUserById(userId, { password: pw, email_confirm: true });
+        if (uErr) return json({ error: uErr.message }, 400);
+      } else userId = cu.user.id;
 
       const { error: pErr } = await db.from("profiles").upsert(
-        { id: userId, full_name: fullName, email, phone, role: "admin", approved: true }, { onConflict: "id" });
+        { id: userId, full_name: fullName, email, role: "admin", approved: true }, { onConflict: "id" });
       if (pErr) return json({ error: "Could not save the admin profile: " + pErr.message }, 500);
       return json({ ok: true });
     }

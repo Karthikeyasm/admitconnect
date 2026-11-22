@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AdmitConnect – Counselling Call Tracker (Demo)</title>
-<script>/* Chart.js 4.4.1 (MIT) – inlined for offline use */
+<script>/* Chart.js 4.4.1 (MIT) – bundled into the page */
 /*!
  * Chart.js v4.4.1
  * https://www.chartjs.org
@@ -303,7 +303,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:50 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 16:50 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -372,7 +372,7 @@ aside{position:sticky}
 
 <div class="modal" id="mcModal" onclick="if(event.target===this)this.classList.remove('on')"><div class="mbox" id="mcBox"></div></div>
 <div class="auth" id="auth"></div>
-<!-- Supabase client (login + database). If it cannot load, the page falls back to offline demo accounts. -->
+<!-- Supabase client (login + database). Required: the site works online only. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <div id="toast" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:8px;display:none;z-index:40"></div>
@@ -776,7 +776,7 @@ const MOCK_COUNSELLORS = [{id:'CN-014', name:'Ananya (Counsellor 1)'}, {id:'CN-0
 let callModes = {'CN-014':'auto', 'CN-015':'manual'};   // loaded from browser storage at start-up
 let defaultMode = 'auto';
 let actingC = 'CN-014';                      // counsellor currently being viewed / logged in
-const counsellors = () => [...MOCK_COUNSELLORS, ...getUsers().filter(u=>u.role==='counsellor').map(u=>({id:u.id, name:u.name}))];
+const counsellors = () => [...MOCK_COUNSELLORS];
 const cName = id => (counsellors().find(c=>c.id===id)||{name:id}).name;
 const modeOf = id => callModes[id] || defaultMode;
 // 'both' for admin (full access), 'auto' / 'manual' for a counsellor, null for college
@@ -865,7 +865,7 @@ function renderSide(){
 }
 function renderTop(){
   const rs = document.getElementById('roleSel');
-  // Role switcher = preview tool: only real database admins, the demo user or the offline copy may use it
+  // Role switcher = preview tool: only the real database admin or the demo user may use it
   const canPreview = !sbMe || sbMe.role==='admin';
   rs.style.display = canPreview ? '' : 'none';
   rs.innerHTML = roleOptions(true);
@@ -1639,7 +1639,7 @@ function renderSettings(v){
   // Real database accounts: name / email / phone come from the database (read-only). Demo user: fixed "Demo Admin".
   const locked = k => (sbMe && ['name','email','phone','id'].includes(k)) || (profile.id==='DEMO' && ['name','email','phone','id'].includes(k));
   const inp = (k,l,ph)=>`<div><label>${l}${locked(k)?' <span class="muted">(managed by admin)</span>':''}</label><input value="${esc(profile[k]||'')}" placeholder="${ph||''}" ${locked(k)?'disabled':`oninput="setProf('${k}',this.value)"`}></div>`;
-  const who = !sb ? '📴 Offline copy – browser-only accounts' : sbMe ? `🟢 Logged in to the database as <b>${esc(sbMe.full_name)}</b> (${sbMe.role})` : profile.id==='DEMO' ? '🟡 Demo user – mock data only, not a database account' : '';
+  const who = sbMe ? `🟢 Logged in to the database as <b>${esc(sbMe.full_name)}</b> (${sbMe.role})` : profile.id==='DEMO' ? '🟡 Demo user – mock data only, not a database account' : '';
   v.innerHTML = `<div class="sgrid">
   <div>
     ${isAdmin?`<div class="card"><h3>📞 Calling mode <small>· per counsellor</small></h3>
@@ -1830,12 +1830,11 @@ function saveManual(){
   renderAll(); if (document.getElementById('drawer').classList.contains('on')) openCall(c.id);
 }
 
-/* ================= Login & registration =================
-   Online: accounts are stored in the AdmitConnect database (Supabase Auth + public.profiles).
-           Supabase keeps passwords as secure one-way hashes; this page never stores them.
-   Offline: if the Supabase library cannot load (no internet / offline copy), the page falls back
-           to the earlier demo accounts saved in this browser only.
-   REQ-DB-01 (login data). New accounts must be approved by an administrator. */
+/* ================= Login (online only) =================
+   Accounts live in the AdmitConnect database (Supabase Auth + public.profiles).
+   Supabase keeps passwords as secure one-way hashes; this page never stores them.
+   There is no offline mode: without a connection the page asks the user to reconnect.
+   First visit (no admin yet): email → admin code → set password → logged in as the Admin. */
 const SB_URL = 'https://tebxshkktjatbhytulka.supabase.co';
 const SB_KEY = 'sb_publishable_k0EmhjAXPXGA58Aqke57xA_9YzwxbEI';   // publishable key: safe in a browser with RLS on
 // "Keep me logged in": ticked → session kept in localStorage; unticked → only until the tab closes
@@ -1853,26 +1852,34 @@ let sb = null;
 try {
   if (window.supabase && window.supabase.createClient)
     sb = window.supabase.createClient(SB_URL, SB_KEY, {auth:{storage:sbStorage, persistSession:true, autoRefreshToken:true}});
-} catch(e){ console.warn('[AdmitConnect] Supabase unavailable – using offline demo accounts', e); sb = null; }
+} catch(e){ console.warn('[AdmitConnect] Supabase unavailable', e); sb = null; }
 
-const getUsers  = () => store.get('users', []);
-const saveUsers = u  => store.set('users', u);
-async function hashPw(pw){   // offline demo accounts only
-  try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ac:'+pw));
-        return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join(''); }
-  catch(e){ let h=0; for (const ch of 'ac:'+pw) h=(h*31+ch.charCodeAt(0))|0; return 'x'+h; }
-}
 let authMode = 'login';
 const esc = t => String(t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let setupEmail = '', setupCode = '';
 function renderAuth(mode, msg, isErr){
   authMode = mode || authMode;
+  if (!sb) authMode = 'nonet';
   const note = (m,err)=> m?`<div class="note" style="margin:0 0 12px;${err?'background:#fef2f2;color:#991b1b':'background:#ecfdf5;color:#065f46'}">${m}</div>`:'';
+  const back = `<div style="text-align:center;font-size:13px;margin-top:12px"><span class="alink" onclick="renderAuth('login')">← Back</span></div>`;
   let body = '';
-  if (authMode==='login') body = `
-      <div id="setupLink"></div>
+  if (authMode==='nonet') body = `
+      <h2 style="margin:0 0 6px;font-size:20px">Can't connect</h2>
+      <div class="muted" style="font-size:13px;margin-bottom:14px">AdmitConnect works online only. Check your internet connection and try again.</div>
+      <button class="abtn" onclick="location.reload()">Try again</button>`;
+  else if (authMode==='login' && setupNeeded===null) body = `<h2 style="margin:0 0 6px;font-size:20px">Connecting…</h2><div class="muted" style="font-size:13px">Please wait.</div>`;
+  else if (authMode==='login' && setupNeeded) body = `
+      <h2 style="margin:0 0 6px;font-size:20px">Welcome to AdmitConnect</h2>
+      <div class="muted" style="font-size:13px;margin-bottom:14px">First-time login. Enter your email ID to get started.</div>${note(msg,isErr)}
+      <form onsubmit="event.preventDefault();setupStep1()">
+        <div class="afield"><label>Email ID</label><input id="gEmail" type="email" autocomplete="email" placeholder="name@gmail.com" value="${esc(setupEmail)}"></div>
+        <div class="aerr" id="gErr"></div>
+        <button class="abtn" type="submit" id="gBtn">Continue</button></form>
+      <div style="text-align:center;margin-top:12px"><span class="alink" style="font-size:13px" onclick="demoLogin()">Continue as demo user (mock data) →</span></div>`;
+  else if (authMode==='login') body = `
       <h2 style="margin:0 0 14px;font-size:20px">Log in</h2>${note(msg,isErr)}
       <form onsubmit="event.preventDefault();doLogin()">
-        <div class="afield"><label>${sb?'Email ID':'Email or phone number'}</label><input id="lId" autocomplete="username" placeholder="${sb?'name@example.com':'name@example.com or 98XXXXXXXX'}"></div>
+        <div class="afield"><label>Email ID</label><input id="lId" autocomplete="username" placeholder="name@example.com"></div>
         <div class="afield"><label>Password</label><input id="lPw" type="password" autocomplete="current-password" placeholder="Your password"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:-2px 0 10px">
           <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="lRem" checked> Keep me logged in</label>
@@ -1882,28 +1889,29 @@ function renderAuth(mode, msg, isErr){
       </form>
       <div class="muted" style="text-align:center;font-size:13px;margin-top:12px">No account? Accounts are created by your administrator.</div>
       <div style="text-align:center;margin-top:10px"><span class="alink" style="font-size:13px" onclick="demoLogin()">Continue as demo user (Admin, mock data) →</span></div>`;
+  else if (authMode==='code') body = `
+      <h2 style="margin:0 0 6px;font-size:20px">You'll be logged in as Admin</h2>
+      <div class="muted" style="font-size:13px;margin-bottom:14px"><b>${esc(setupEmail)}</b> will become the AdmitConnect administrator. Enter the admin code to confirm.</div>${note(msg,isErr)}
+      <form onsubmit="event.preventDefault();setupStep2()">
+        <div class="afield"><label>Admin code</label><input id="gCode" type="password" autocomplete="off" placeholder="Admin code"></div>
+        <div class="aerr" id="gErr"></div>
+        <button class="abtn" type="submit" id="gBtn">Verify code</button></form>${back}`;
+  else if (authMode==='adminpw') body = `
+      <h2 style="margin:0 0 6px;font-size:20px">Set your password</h2>
+      <div class="muted" style="font-size:13px;margin-bottom:14px">Code verified. Create the password you'll use to log in as Admin (<b>${esc(setupEmail)}</b>).</div>${note(msg,isErr)}
+      <form onsubmit="event.preventDefault();setupStep3()">
+        <div class="afield"><label>Your full name</label><input id="gName" autocomplete="name" placeholder="e.g. Anush G N"></div>
+        <div class="afield"><label>New password</label><input id="gPw" type="password" autocomplete="new-password" placeholder="Min 8, letters + numbers"></div>
+        <div class="afield"><label>Confirm password</label><input id="gPw2" type="password" autocomplete="new-password" placeholder="Repeat password"></div>
+        <div class="aerr" id="gErr"></div>
+        <button class="abtn" type="submit" id="gBtn">Save password and log in</button></form>${back}`;
   else if (authMode==='first') body = `
       <h2 style="margin:0 0 6px;font-size:20px">First-time login / Forgot password</h2>
-      <div class="muted" style="font-size:13px;margin-bottom:14px">${sb?'Enter the email ID your administrator registered. We\'ll email you a link to set your password (valid for a limited time).'
-                                                                : 'Offline demo: ask your administrator for your temporary password, then log in with it – you\'ll be asked to set your own password.'}</div>${note(msg,isErr)}
-      ${sb?`<form onsubmit="event.preventDefault();doFirst()">
+      <div class="muted" style="font-size:13px;margin-bottom:14px">Enter the email ID your administrator registered. We'll email you a link to set your password (valid for a limited time).</div>${note(msg,isErr)}
+      <form onsubmit="event.preventDefault();doFirst()">
         <div class="afield"><label>Email ID</label><input id="fEmail" type="email" autocomplete="email" placeholder="name@example.com"></div>
         <div class="aerr" id="fErr"></div>
-        <button class="abtn" type="submit" id="fBtn">Email me a set-password link</button></form>`:''}
-      <div style="text-align:center;font-size:13px;margin-top:12px"><span class="alink" onclick="renderAuth('login')">← Back to log in</span></div>`;
-  else if (authMode==='setup') body = `
-      <h2 style="margin:0 0 6px;font-size:20px">🛠 First-time setup</h2>
-      <div class="muted" style="font-size:13px;margin-bottom:14px">No admin exists yet. Create the <b>one</b> admin account for AdmitConnect. ${sb?'You need the <b>setup code</b> chosen when the system was installed. You will get an email to set your password.':'Offline demo: the admin is saved in this browser.'}</div>${note(msg,isErr)}
-      <form onsubmit="event.preventDefault();doSetup()">
-        <div class="afield"><label>Full name</label><input id="uName" autocomplete="name" placeholder="e.g. Anush G N"></div>
-        <div class="afield"><label>Email ID</label><input id="uEmail" type="email" autocomplete="email" placeholder="name@example.com"></div>
-        <div class="afield"><label>Phone number</label><input id="uPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"></div>
-        ${sb?`<div class="afield"><label>Setup code</label><input id="uCode" type="password" autocomplete="off" placeholder="One-time code from installation"></div>`
-            :`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="afield"><label>Password</label><input id="uPw" type="password" autocomplete="new-password" placeholder="Min 8, letters + numbers"></div>
-              <div class="afield"><label>Confirm password</label><input id="uPw2" type="password" autocomplete="new-password"></div></div>`}
-        <div class="aerr" id="uErr"></div>
-        <button class="abtn" type="submit" id="uBtn">Create admin account</button></form>
-      <div style="text-align:center;font-size:13px;margin-top:12px"><span class="alink" onclick="renderAuth('login')">← Back to log in</span></div>`;
+        <button class="abtn" type="submit" id="fBtn">Email me a set-password link</button></form>${back}`;
   else if (authMode==='setpw') body = `
       <h2 style="margin:0 0 6px;font-size:20px">Set your password</h2>
       <div class="muted" style="font-size:13px;margin-bottom:14px">${msg||'Create the password you will use to log in from now on.'}</div>
@@ -1916,49 +1924,56 @@ function renderAuth(mode, msg, isErr){
     <div class="abrand"><h1>Admit<span>Connect</span></h1>
       <div>Admission counselling · bot calls · WhatsApp/SMS follow-ups</div>
       <ul style="padding-left:18px;margin:6px 0"><li>Bot or manual calls for every student on your course lists</li><li>Track interest, replies and admissions with proof</li><li>Colleges see their own seat status</li></ul>
-      <div style="margin-top:auto;font-size:12px;color:#94a3b8">${sb?'Secure login':'Offline demo'} · <span id="verStampA"></span></div></div>
+      <div style="margin-top:auto;font-size:12px;color:#94a3b8">Secure login · <span id="verStampA"></span></div></div>
     <div class="aform">${body}
-      <div class="anote">${sb ? 'Accounts are created by an administrator. You receive an email to set your password.'
-                              : 'Offline demo: accounts are saved in this browser only. Don\'t use a real password.'}</div>
+      <div class="anote">${setupNeeded ? 'The first person to log in with the admin code becomes the one administrator.' : 'Accounts are created by the administrator. You receive an email to set your password.'}</div>
     </div></div>`;
   const vs = document.getElementById('verStamp'); if (vs) document.getElementById('verStampA').textContent = vs.textContent;
   document.getElementById('auth').classList.add('on');
-  if (authMode==='login') checkSetupNeeded();
+  if (authMode==='login' && setupNeeded===null) checkSetupNeeded();
+  const f = document.querySelector('#auth input'); if (f && !f.value) f.focus();
 }
-/* ---------- First-run setup: create the one admin from the website ---------- */
-let setupNeeded = null;
+/* ---------- First login on a new site: email → admin code → password ---------- */
+let setupNeeded = null;   // null = not checked yet
+const fnErr = async error => { let m = error.message || String(error); try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch(e){} return m; };
 async function checkSetupNeeded(){
-  if (setupNeeded===null){
-    if (!sb) setupNeeded = !getUsers().some(u=>u.role==='admin');
-    else { try { const { data, error } = await sb.functions.invoke('admin-setup', { body:{ action:'status' } });
-                 setupNeeded = !error && data && data.needs_setup === true; } catch(e){ setupNeeded = false; } }
-  }
-  const el = document.getElementById('setupLink');
-  if (el) el.innerHTML = setupNeeded ? `<div class="note" style="margin:0 0 14px;background:#eef2ff;color:#3730a3">No admin has been set up yet. <span class="alink" onclick="renderAuth('setup')"><b>🛠 First-time setup – create the admin account →</b></span></div>` : '';
+  try { const { data, error } = await sb.functions.invoke('admin-setup', { body:{ action:'status' } });
+        setupNeeded = !error && data && data.needs_setup === true; }
+  catch(e){ setupNeeded = false; }
+  if (authMode==='login') renderAuth('login');
 }
-async function doSetup(){
-  const v = id => (document.getElementById(id)||{value:''}).value.trim(), err = m => (document.getElementById('uErr').textContent = m, false);
-  const name=v('uName'), email=v('uEmail').toLowerCase(), phone=v('uPhone').replace(/\D/g,'');
-  if (name.length<2) return err('Please enter your full name.');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return err('Please enter a valid email ID.');
-  if (!/^[6-9]\d{9}$/.test(phone)) return err('Phone must be a 10-digit Indian mobile number (starts with 6–9).');
-  if (!sb){
-    const pw=document.getElementById('uPw').value, pw2=document.getElementById('uPw2').value;
-    if (!pwOk(pw)) return err('Password must be at least 8 characters with letters and numbers.');
-    if (pw!==pw2) return err('The two passwords do not match.');
-    const users = getUsers(); if (users.some(u=>u.role==='admin')) return err('An admin already exists.');
-    const u = {id:'ADM-001', name, email, phone, role:'admin', pw: await hashPw(pw), created:new Date().toISOString()};
-    users.push(u); saveUsers(users); setupNeeded = false; store.set('session',{uid:u.id}); startSession(u); toast('Admin account created'); return;
-  }
-  const code = v('uCode'); if (!code) return err('Please enter the setup code.');
-  busy('uBtn', true, 'Creating…');
+function setupStep1(){
+  const email = document.getElementById('gEmail').value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ document.getElementById('gErr').textContent = 'Please enter a valid email ID.'; return; }
+  setupEmail = email; renderAuth('code');
+}
+async function setupStep2(){
+  const code = document.getElementById('gCode').value.trim(), err = m => document.getElementById('gErr').textContent = m;
+  if (!code) return err('Please enter the admin code.');
+  busy('gBtn', true, 'Checking…');
   try {
-    const { data, error } = await sb.functions.invoke('admin-setup', { body:{ action:'create_admin', full_name:name, email, phone, setup_code:code, redirect_to: location.origin + location.pathname } });
-    if (error){ let m = error.message; try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch(e){} return err(m); }
-    setupNeeded = false;
-    renderAuth('login', `✔ Admin account created for <b>${esc(name)}</b>. Check <b>${esc(email)}</b> for the link to set your password, then log in.`);
+    const { error } = await sb.functions.invoke('admin-setup', { body:{ action:'verify_code', email: setupEmail, setup_code: code } });
+    if (error) return err(await fnErr(error));
+    setupCode = code; renderAuth('adminpw');
   } catch(e){ err('Network problem – please try again.'); }
-  finally { busy('uBtn', false, 'Create admin account'); }
+  finally { busy('gBtn', false, 'Verify code'); }
+}
+async function setupStep3(){
+  const name = document.getElementById('gName').value.trim(), pw = document.getElementById('gPw').value, pw2 = document.getElementById('gPw2').value;
+  const err = m => document.getElementById('gErr').textContent = m;
+  if (name.length<2) return err('Please enter your full name.');
+  if (!pwOk(pw)) return err('Password must be at least 8 characters with letters and numbers.');
+  if (pw!==pw2) return err('The two passwords do not match.');
+  busy('gBtn', true, 'Setting up…');
+  try {
+    const { error } = await sb.functions.invoke('admin-setup', { body:{ action:'create_admin', email: setupEmail, setup_code: setupCode, full_name: name, password: pw } });
+    if (error){ const m = await fnErr(error); if (/already exists/i.test(m)){ setupNeeded=false; return renderAuth('login', m, true); } return err(m); }
+    setupNeeded = false; setupCode = '';
+    const { data, error: e2 } = await sb.auth.signInWithPassword({ email: setupEmail, password: pw });
+    if (e2) return renderAuth('login', 'Admin account created. Please log in with your new password.');
+    toast('Admin account ready'); await enterWithSupabaseUser(data.user);
+  } catch(e){ err('Network problem – please try again.'); }
+  finally { busy('gBtn', false, 'Save password and log in'); }
 }
 /* ---------- Hand the admin role to another user ---------- */
 let xferArm = null;
@@ -1967,30 +1982,21 @@ async function transferAdmin(){
   if (!to){ out.textContent = 'Choose the new admin first.'; return; }
   if (xferArm !== to){ xferArm = to; out.innerHTML = '<b style="color:#b45309">Press "Transfer" again to confirm. You will become a Counsellor.</b>'; return; }
   xferArm = null;
-  if (!sb){
-    const users = getUsers(), me = users.find(u=>u.id===profile.id), them = users.find(u=>u.id===to);
-    if (!me || !them){ out.textContent = 'Only browser accounts can be transferred in the offline copy.'; return; }
-    me.role = 'counsellor'; them.role = 'admin'; saveUsers(users); toast('Admin role transferred to '+them.name); startSession(me); return;
-  }
   const { data, error } = await sb.functions.invoke('admin-setup', { body:{ action:'transfer', to_user_id: to } });
-  if (error){ let m = error.message; try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch(e){} out.textContent = 'Transfer failed: '+m; return; }
+  if (error){ out.textContent = 'Transfer failed: ' + await fnErr(error); return; }
   toast('Admin role transferred to '+data.new_admin);
   const { data: s2 } = await sb.auth.getSession(); if (s2 && s2.session) await enterWithSupabaseUser(s2.session.user);
 }
 async function renderTransfer(){
   const el = document.getElementById('xferBox'); if (!el) return;
-  let opts = [];
-  if (sb && isDbAdmin()){
-    const { data } = await sb.from('profiles').select('id,full_name,role,approved').neq('role','admin').eq('approved', true).order('full_name');
-    opts = (data||[]).map(u=>[u.id, u.full_name+' ('+u.role+')']);
-  } else if (!sb){ opts = getUsers().filter(u=>u.role!=='admin').map(u=>[u.id, u.name+' ('+u.role+')']); }
-  else { el.innerHTML = '<div class="muted" style="font-size:13px">Log in with the real admin account to transfer the role.</div>'; return; }
+  if (!isDbAdmin()){ el.innerHTML = '<div class="muted" style="font-size:13px">Log in with the real admin account to transfer the role.</div>'; return; }
+  const { data } = await sb.from('profiles').select('id,full_name,role,approved').neq('role','admin').eq('approved', true).order('full_name');
+  const opts = (data||[]).map(u=>[u.id, u.full_name+' ('+u.role+')']);
   el.innerHTML = opts.length ? `<div class="set"><div><label>New admin</label><select id="xferTo"><option value="">— choose a user —</option>${opts.map(([i,l])=>`<option value="${i}">${esc(l)}</option>`).join('')}</select></div>
      <div style="display:flex;align-items:flex-end"><button class="btn" onclick="transferAdmin()">🔁 Transfer</button></div></div><div id="xferOut" class="muted" style="font-size:12px;margin-top:6px"></div>`
    : '<div class="muted" style="font-size:13px">Add the person first (➕ Add user). They can then receive the admin role here.</div>';
 }
 const pwOk = pw => pw.length>=8 && /[A-Za-z]/.test(pw) && /\d/.test(pw);
-let pendingLocal = null;   // offline: user who must replace a temporary password
 // Send a set-password link (first login, expired invite, or forgotten password)
 async function doFirst(){
   const email = document.getElementById('fEmail').value.trim().toLowerCase(), err = document.getElementById('fErr');
@@ -2003,16 +2009,11 @@ async function doFirst(){
   } catch(e){ err.textContent='Network problem – please try again.'; }
   finally { busy('fBtn', false, 'Email me a set-password link'); }
 }
-// Save the new password (after an email link, or after an offline temporary password)
+// Save the new password (after an email link)
 async function doSetPw(){
   const pw = document.getElementById('sPw').value, pw2 = document.getElementById('sPw2').value, err = document.getElementById('sErr');
   if (!pwOk(pw)){ err.textContent='Password must be at least 8 characters with letters and numbers.'; return; }
   if (pw!==pw2){ err.textContent='The two passwords do not match.'; return; }
-  if (pendingLocal){
-    const users = getUsers(), u = users.find(x=>x.id===pendingLocal.id);
-    u.pw = await hashPw(pw); u.mustChange = false; saveUsers(users); pendingLocal = null;
-    store.set('session', {uid:u.id}); startSession(u); toast('Password saved'); return;
-  }
   busy('sBtn', true, 'Saving…');
   try {
     const { data, error } = await sb.auth.updateUser({ password: pw });
@@ -2027,7 +2028,7 @@ async function doSetPw(){
 function openAddUser(){
   document.getElementById('mcBox').innerHTML = `
     <div style="display:flex;align-items:center"><h2 style="margin:0;font-size:18px">➕ Add user</h2><button class="x" onclick="document.getElementById('mcModal').classList.remove('on')">×</button></div>
-    <div class="muted" style="margin:4px 0 12px;font-size:13px">${sb&&isDbAdmin()?'The person receives an email with a link to set their own password.':'Offline / demo: a temporary password is created – share it; they must change it at first login.'}</div>
+    <div class="muted" style="margin:4px 0 12px;font-size:13px">The person receives an email with a link to set their own password.</div>
     <div class="set">
       <div><label>Full name</label><input id="aName" placeholder="e.g. Anush G N"></div>
       <div><label>Email ID</label><input id="aEmail" type="email" placeholder="name@example.com"></div>
@@ -2049,7 +2050,8 @@ async function addUser(){
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return err('Please enter a valid email ID.');
   if (!/^[6-9]\d{9}$/.test(phone)) return err('Phone must be a 10-digit Indian mobile number (starts with 6–9).');
   err('');
-  if (sb && isDbAdmin()){
+  if (!isDbAdmin()) return err('Log in with the real admin account (not the demo user) to create accounts.');
+  {
     busy('aBtn', true, 'Creating…');
     try {
       const { data, error } = await sb.functions.invoke('invite-user', { body: { full_name:name, email, phone, role:rl, college, employee_id:emp, redirect_to: location.origin + location.pathname } });
@@ -2066,68 +2068,12 @@ async function addUser(){
     finally { busy('aBtn', false, 'Create account & send invite'); }
     return;
   }
-  if (sb && !isDbAdmin()) return err('Log in with a real admin account (not the demo user) to create database accounts.');
-  // offline demo: local account with a temporary password that must be changed at first login
-  const users = getUsers();
-  if (users.some(u=>u.email===email)) return err('An account with this email already exists.');
-  if (users.some(u=>u.phone===phone)) return err('An account with this phone number already exists.');
-  const temp = 'AC-' + Math.random().toString(36).slice(2,6).toUpperCase() + Math.floor(1000+Math.random()*9000);
-  const u = {id: emp || ('U'+String(users.length+1).padStart(3,'0')), name, email, phone, role:rl, college, pw: await hashPw(temp), mustChange:true, created:new Date().toISOString()};
-  users.push(u); saveUsers(users);
-  if (rl==='counsellor'){ callModes[u.id] = mode; store.set('callModes', callModes); }
-  const mail = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent('Your AdmitConnect account')}&body=${encodeURIComponent(`Hi ${name},\n\nAn AdmitConnect account has been created for you.\nLink: ${location.origin+location.pathname}\nEmail: ${email}\nTemporary password: ${temp}\n\nYou will be asked to set your own password the first time you log in.`)}`;
-  document.getElementById('aOut').innerHTML = `<div class="note" style="background:#ecfdf5;color:#065f46">✔ Account created. Temporary password: <b style="font-family:monospace;font-size:15px">${temp}</b>
-    <div style="margin-top:6px"><a href="${mail}">✉ Open an email to ${esc(email)}</a> · <span class="alink" onclick="navigator.clipboard&&navigator.clipboard.writeText('${temp}').then(()=>toast('Copied'),()=>toast('Copy not allowed here'))">Copy password</span></div>
-    <div class="muted" style="font-size:12px;margin-top:4px">Offline demo: works only in this browser. The person must change it at first login.</div></div>`;
-  renderAll();
 }
 async function sendSetPwLink(email){
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
   toast(error ? 'Could not send: '+error.message : '✉ Set-password link sent to '+email);
 }
 function busy(id, on, label){ const b=document.getElementById(id); if (b){ b.disabled=on; b.textContent=label; } }
-
-async function doRegister(){
-  const v = id => document.getElementById(id).value.trim(), err = m => (document.getElementById('rErr').textContent = m, false);
-  const name=v('rName'), email=v('rEmail').toLowerCase(), phone=v('rPhone').replace(/\D/g,''), pw=document.getElementById('rPw').value, pw2=document.getElementById('rPw2').value, rl=v('rRole');
-  if (name.length<2) return err('Please enter your full name.');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return err('Please enter a valid email ID.');
-  if (!/^[6-9]\d{9}$/.test(phone)) return err('Phone number must be a 10-digit Indian mobile number (starts with 6–9).');
-  if (pw.length<8 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)) return err('Password must be at least 8 characters with letters and numbers.');
-  if (pw!==pw2) return err('The two passwords do not match.');
-  const college = rl==='college' ? v('rCol') : null;
-
-  if (sb){
-    busy('rBtn', true, 'Creating account…');
-    try {
-      const { data, error } = await sb.auth.signUp({ email, password: pw,
-        options: { data: { full_name: name, phone, role: rl, college }, emailRedirectTo: location.origin + location.pathname } });
-      if (error){
-        console.warn('[AdmitConnect] signUp error', error);
-        const m = (error.message||'').toLowerCase();
-        if (m.includes('already')) return err('An account with this email already exists – please log in.');
-        if (m.includes('database error')) return err('This phone number is already registered, or a detail is invalid. Please check and try again.');
-        if (m.includes('rate')) return err('Too many attempts. Please wait a few minutes and try again.');
-        return err('Could not create the account: ' + error.message);
-      }
-      if (data.session) await sb.auth.signOut();          // wait for admin approval before using the app
-      renderAuth('login', data.session
-        ? `✔ Account created for <b>${esc(name)}</b>. An administrator must approve it before you can log in.`
-        : `✔ Account created for <b>${esc(name)}</b>. Please confirm your email using the link we sent, then wait for an administrator to approve it.`);
-      document.getElementById('lId').value = email;
-    } catch(e){ console.error(e); err('Network problem – please check your internet and try again.'); }
-    finally { busy('rBtn', false, 'Create account'); }
-    return;
-  }
-  // ---- offline demo fallback ----
-  const users = getUsers();
-  if (users.some(u=>u.email===email)) return err('An account with this email already exists – please log in.');
-  if (users.some(u=>u.phone===phone)) return err('An account with this phone number already exists – please log in.');
-  const u = {id:'U'+String(users.length+1).padStart(3,'0'), name, email, phone, role:rl, college, pw: await hashPw(pw), created: new Date().toISOString()};
-  users.push(u); saveUsers(users);
-  renderAuth('login', `✔ Account created for <b>${esc(name)}</b>. Please log in.`);
-  document.getElementById('lId').value = email;
-}
 
 /* ---------- Account approvals for admins (bell + Settings › Accounts) ----------
    Reads/updates public.profiles; the database's RLS rules decide what an admin may do. */
@@ -2145,8 +2091,7 @@ function paintBell(errMsg){
   const P = document.getElementById('bellP');
   const roleSel = (id,cur) => `<select id="rq_${id}">${[['counsellor','🎧 Counsellor'],['college','🏫 College partner']].map(([v,l])=>`<option value="${v}" ${v===cur?'selected':''}>${l}</option>`).join('')}</select>`;
   P.innerHTML = `<div style="display:flex;align-items:center"><b>🔔 Account requests</b><span class="sp"></span><span class="alink" style="font-size:12px" onclick="loadPending()">↻ Refresh</span></div>` +
-    (!sb ? '<div class="muted" style="margin-top:8px;font-size:13px">Offline copy – approvals need the online site.</div>'
-    : !isDbAdmin() ? '<div class="muted" style="margin-top:8px;font-size:13px">Log in with a real <b>admin</b> account to see requests. (The demo user is not stored in the database.)</div>'
+    (!isDbAdmin() ? '<div class="muted" style="margin-top:8px;font-size:13px">Log in with a real <b>admin</b> account to see requests. (The demo user is not stored in the database.)</div>'
     : errMsg ? `<div class="aerr" style="margin-top:8px">Could not load requests: ${esc(errMsg)}</div>`
     : !pending.length ? '<div class="muted" style="margin-top:8px;font-size:13px">No accounts waiting for approval. ✔</div>'
     : pending.map(u=>`<div class="req"><b>${esc(u.full_name)}</b> <span class="muted" style="font-size:12px">· ${new Date(u.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</span>
@@ -2171,7 +2116,7 @@ async function setAccount(id, field, val){
 }
 async function loadAccounts(){
   const el = document.getElementById('acctList'); if (!el) return;
-  if (!isDbAdmin()){ const lu=getUsers(); el.innerHTML = `<div class="muted" style="font-size:13px">${sb?(profile.id==='DEMO'?'You are using the <b>demo user</b>, which is not a database account, so the real user list cannot be shown. Log out and log in with the admin\'s own email (see SETUP.md, step 5).':'Only the admin can see this list.'):'Offline demo accounts in this browser:'}</div>`+(!sb&&lu.length?`<table><thead><tr><th>Name</th><th>Email · Phone</th><th>Role</th><th>Status</th></tr></thead><tbody>${lu.map(u=>`<tr style="cursor:default"><td>${esc(u.name)}</td><td style="font-size:12px">${esc(u.email)}<br>${esc(u.phone)}</td><td>${u.role}</td><td>${u.mustChange?'<b style="color:#d97706">Temporary password</b>':'Active'}</td></tr>`).join('')}</tbody></table>`:''); return; }
+  if (!isDbAdmin()){ el.innerHTML = `<div class="muted" style="font-size:13px">${profile.id==='DEMO'?'You are using the <b>demo user</b> (mock data), so the real user list is not shown. Log out and log in with the admin account.':'Only the admin can see this list.'}</div>`; return; }
   const { data, error } = await sb.from('profiles').select('id,full_name,email,phone,role,college,approved,created_at').order('created_at');
   if (error){ el.innerHTML = `<div class="aerr">Could not load accounts: ${esc(error.message)}</div>`; return; }
   data.sort((a,b)=>(b.role==='admin')-(a.role==='admin'));
@@ -2206,7 +2151,7 @@ async function enterWithSupabaseUser(user){
 async function doLogin(){
   const raw = document.getElementById('lId').value.trim(), pw = document.getElementById('lPw').value;
   const rem = document.getElementById('lRem').checked, errEl = document.getElementById('lErr');
-  if (sb){
+  {
     const email = raw.toLowerCase();
     if (!email.includes('@')){ errEl.textContent = 'Please log in with your email ID.'; return; }
     try { localStorage.setItem('ac_remember', rem ? '1' : '0'); } catch(e){}
@@ -2224,14 +2169,6 @@ async function doLogin(){
     finally { busy('lBtn', false, 'Log in'); }
     return;
   }
-  // ---- offline demo fallback ----
-  const idv = raw.toLowerCase().replace(/^\+91/,'');
-  const u = getUsers().find(x=>x.email===idv || x.phone===idv.replace(/\D/g,''));
-  if (!u || u.pw !== await hashPw(pw)){ errEl.textContent = 'Email/phone or password is incorrect.'; return; }
-  if (u.mustChange){ pendingLocal = u; renderAuth('setpw', 'You logged in with a temporary password. Please create your own password now.'); return; }
-  store.set('session', rem ? {uid:u.id} : null);
-  try { sessionStorage.setItem('ac_session', JSON.stringify({uid:u.id})); } catch(e){}
-  startSession(u);
 }
 function demoLogin(){ startSession({id:'DEMO', name:'Demo Admin', email:'demo@admitconnect.example', phone:'9800000000', role:'admin'}); }
 function startSession(u){
@@ -2245,28 +2182,22 @@ function startSession(u){
 }
 async function logout(){
   sbMe = null; clearInterval(pendTimer); pending = [];
-  store.set('session', null); try { sessionStorage.removeItem('ac_session'); } catch(e){}
   if (simTimer){ clearInterval(simTimer); simTimer=null; }
   if (sb){ try { await sb.auth.signOut(); } catch(e){ console.warn(e); } }
   renderAuth('login', 'You have been logged out.');
 }
 async function checkSession(){
-  if (sb){
-    if (AUTH_ERR){ history.replaceState(null,'',location.pathname+location.search);
-      renderAuth('first', 'That link has expired or was already used. Enter your email to get a new one.', true); return; }
-    sb.auth.onAuthStateChange(ev => { if (ev==='PASSWORD_RECOVERY') renderAuth('setpw'); });
-    try {
-      const { data } = await sb.auth.getSession();
-      if (data && data.session && data.session.user){
-        if (AUTH_LINK==='invite' || AUTH_LINK==='recovery'){ renderAuth('setpw', AUTH_LINK==='invite' ? 'Welcome! Create the password you will use to log in.' : 'Choose a new password.'); return; }
-        await enterWithSupabaseUser(data.session.user); return; }
-    } catch(e){ console.warn('[AdmitConnect] session check failed', e); }
-    renderAuth('login'); return;
-  }
-  let sess = store.get('session', null);
-  if (!sess){ try { sess = JSON.parse(sessionStorage.getItem('ac_session')||'null'); } catch(e){} }
-  const u = sess && getUsers().find(x=>x.id===sess.uid);
-  if (u) startSession(u); else renderAuth('login');
+  if (!sb){ renderAuth('nonet'); return; }
+  if (AUTH_ERR){ history.replaceState(null,'',location.pathname+location.search);
+    renderAuth('first', 'That link has expired or was already used. Enter your email to get a new one.', true); return; }
+  sb.auth.onAuthStateChange(ev => { if (ev==='PASSWORD_RECOVERY') renderAuth('setpw'); });
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.user){
+      if (AUTH_LINK==='invite' || AUTH_LINK==='recovery'){ renderAuth('setpw', AUTH_LINK==='invite' ? 'Welcome! Create the password you will use to log in.' : 'Choose a new password.'); return; }
+      await enterWithSupabaseUser(data.session.user); return; }
+  } catch(e){ console.warn('[AdmitConnect] session check failed', e); }
+  renderAuth('login');
 }
 
 STATE = {today:todayS, log:logF, adm:admF, cand:candS, msg:msgF};
