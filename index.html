@@ -303,7 +303,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:25 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:35 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -1364,7 +1364,7 @@ function openCall(id){
       <div><label>Date & time</label>${fmtD(c.date)} 2026, ${c.time}</div>
       <div><label>Listened</label>${mmss(c.dur)} of ${mmss(SCRIPT_SEC)} (${pct(c.dur,SCRIPT_SEC)}%) · ${c.dur?(c.completed?'✔ Completed':'✖ Not completed'):'—'}</div>
       <div><label>Language chosen</label>${c.lang||'<span class="muted">— (Excel: '+c.cand.lang+')</span>'}</div>
-      <div><label>Course chosen on call</label>${c.chosenDom?shortDom(c.chosenDom):'<span class="muted">—</span>'}
+      <div><label>Course chosen on call</label>${c.courses&&c.courses.length>1?c.courses.map(shortDom).join(', '):c.chosenDom?shortDom(c.chosenDom):'<span class="muted">—</span>'}
         ${c.chosenDom&&c.chosenDom!==c.excelDomain?`<div style="margin-top:4px"><span class="warn">⚠ Excel says ${shortDom(c.excelDomain)}</span></div>`:''}</div>
       <div><label>Last exam score</label>${c.cand.score}%</div>
       <div><label>College offered</label>${c.college||'<span class="muted">—</span>'}</div>
@@ -1783,7 +1783,7 @@ function openManual(qi, callId, candId){
       <div><label>Time of call</label><input id="mTime" type="time" value="${v('time',tnow)}"></div>
       <div><label>Talk time (minutes)</label><input id="mDur" type="number" min="0" step="0.5" value="${c&&c.dur?(c.dur/60).toFixed(1):''}" placeholder="e.g. 3"></div>
       <div><label>Language spoken</label><select id="mLang">${opt(LANGS.map(l=>[l.n,l.n]), v('lang',cand.lang))}</select></div>
-      <div><label>Course discussed</label><select id="mCourse">${LEVELS.map(l=>`<optgroup label="${l.name}">${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${(v('chosenDom',null)||cand.domain)===d.id?'selected':''}>${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</option>`).join('')}</optgroup>`).join('')}</select></div>
+      <div style="grid-column:1/-1"><label>Course discussed <span class="muted" style="font-weight:400">(tick one or more)</span></label><div id="mCourseBox"></div></div>
       <div><label>Interest level</label><select id="mLvl">${opt([['','Not captured'],['3','High'],['2','Medium'],['1','Low'],['0','Not interested']], v('lvl',''))}</select></div>
       <div style="grid-column:1/-1"><label>Candidate's message / query</label><textarea id="mMsg" rows="2" placeholder="What did the student or parent say? e.g. wants colleges near home, asked about fees…">${c&&c.query?esc(c.query.text):''}</textarea></div>
       <div><label>Reverted back</label><select id="mRev">${opt([['','No'],['Call back','Call back'],['WhatsApp reply','WhatsApp reply'],['SMS reply','SMS reply']], c&&c.reverted?c.revertVia:'')}</select></div>
@@ -1793,14 +1793,35 @@ function openManual(qi, callId, candId){
     </div>
     <div class="aerr" id="mErr"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" onclick="document.getElementById('mcModal').classList.remove('on')">Cancel</button><button class="btn pri" onclick="saveManual()">Save call</button></div>`;
-  const fillCol = ()=>{ const d=document.getElementById('mCourse').value; document.getElementById('mCol').innerHTML = COLLEGES[d].map(n=>`<option ${n===(c&&c.college)?'selected':''}>${n}</option>`).join(''); };
-  document.getElementById('mCourse').onchange = fillCol; fillCol();
+  // Course picker: level → (PU) Science / Commerce → tick boxes for the courses under it
+  const start = (c && c.courses) || [v('chosenDom',null)||cand.domain];
+  const d0 = DOMAINS.find(d=>d.id===start[0]) || COURSES[0];
+  mcCtx.ticks = new Set(start); mcCtx.lv = d0.lv; mcCtx.stream = d0.lv==='pu' ? (d0.grp ? 'sci' : 'com') : null;
+  mcCtx.college = c && c.college;
+  renderCourseBox();
   document.getElementById('mcModal').classList.add('on');
+}
+function mcCourses(){   // courses shown for the chosen level / stream
+  return COURSES.filter(d=>d.lv===mcCtx.lv && (mcCtx.lv!=='pu' || (mcCtx.stream==='sci' ? d.grp==='pu_sci' : !d.grp)));
+}
+function renderCourseBox(){
+  const chip = (on, label, fn) => `<button type="button" class="btn${on?' pri':''}" style="padding:5px 12px;font-size:13px" onclick="${fn}">${label}</button>`;
+  const ticked = COURSES.filter(d=>mcCtx.ticks.has(d.id));
+  document.getElementById('mCourseBox').innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${LEVELS.map(l=>chip(mcCtx.lv===l.id, l.ic+' '+l.name, `mcCtx.lv='${l.id}';mcCtx.stream=${l.id==='pu'?"mcCtx.stream||'sci'":'null'};renderCourseBox()`)).join('')}</div>
+    ${mcCtx.lv==='pu' ? `<div style="display:flex;gap:6px;margin-top:6px">${chip(mcCtx.stream==='sci','🔬 Science',"mcCtx.stream='sci';renderCourseBox()")}${chip(mcCtx.stream==='com','₹ Commerce'+(mcCtx.ticks.has('pu_com')?' ✔':''),"mcCtx.stream='com';mcCtx.ticks.has('pu_com')?mcCtx.ticks.delete('pu_com'):mcCtx.ticks.add('pu_com');renderCourseBox()")}</div>` : ''}
+    <div style="display:flex;gap:6px 18px;flex-wrap:wrap;margin-top:8px">${(mcCtx.lv==='pu'&&mcCtx.stream==='com') ? '' : mcCourses().map(d=>`<label style="display:inline-flex;gap:6px;align-items:center;font-size:14px;cursor:pointer;font-weight:400;width:auto;margin:0;white-space:nowrap;color:inherit"><input type="checkbox" style="width:16px;height:16px;margin:0;padding:0;flex:none" ${mcCtx.ticks.has(d.id)?'checked':''} onchange="this.checked?mcCtx.ticks.add('${d.id}'):mcCtx.ticks.delete('${d.id}');renderCourseBox()"> ${d.name}</label>`).join('')}</div>
+    <div class="muted" style="font-size:12px;margin-top:6px">${ticked.length ? 'Selected: <b>'+ticked.map(d=>shortDom(d.id)).join(', ')+'</b>' : 'No course ticked yet'}</div>`;
+  const main = ticked[0], col = document.getElementById('mCol');
+  if (col){ const keep = col.value || mcCtx.college;
+    col.innerHTML = main ? COLLEGES[main.id].map(n=>`<option ${n===keep?'selected':''}>${n}</option>`).join('') : '<option value="">Tick a course first</option>'; }
 }
 function saveManual(){
   const g = id => document.getElementById(id).value;
   const {q, cand} = mcCtx; let c = mcCtx.c;
-  const st = g('mStatus'), durMin = parseFloat(g('mDur')||'0'), lvl = g('mLvl'), dom = g('mCourse');
+  const courses = COURSES.filter(d=>mcCtx.ticks.has(d.id)).map(d=>d.id);
+  const st = g('mStatus'), durMin = parseFloat(g('mDur')||'0'), lvl = g('mLvl'), dom = courses[0] || cand.domain;
+  if (st==='answered' && !courses.length){ document.getElementById('mErr').textContent = 'Please tick at least one course discussed.'; return; }
   if (st==='answered' && !durMin){ document.getElementById('mErr').textContent = 'Please enter the talk time for an answered call.'; return; }
   const by = role==='admin' ? (profile.name||'Admin') : cName(actingC);
   if (!c){   // new manual call (from queue or from a candidate)
@@ -1814,6 +1835,7 @@ function saveManual(){
   if (c.manual) c.by = c.by || by;
   c.editedBy = by;
   Object.assign(c, { status:st, time:g('mTime'), dur:Math.round(durMin*60), lang: st==='answered'||st==='disconnected' ? g('mLang') : null,
+    courses: st==='answered' ? courses : c.courses,
     chosenDom: st==='answered' ? dom : c.chosenDom, domain: st==='answered' ? dom : c.domain, lvl: lvl===''?null:+lvl,
     notes: g('mNotes'), reverted: !!g('mRev'), revertVia: g('mRev')||null, revertDate: g('mRev') ? (c.revertDate||TODAY) : null,
     reply: g('mRev') ? (c.reply||'Logged by counsellor') : null });
