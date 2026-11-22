@@ -303,7 +303,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:20 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 17:25 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -1984,12 +1984,16 @@ async function setupStep3(){
   if (pw!==pw2) return err('The two passwords do not match.');
   busy('gBtn', true, 'Setting up…');
   try {
-    const { error: e1 } = await sb.auth.updateUser({ password: pw, data: { full_name: name } });
+    const { data, error: e1 } = await sb.auth.updateUser({ password: pw, data: { full_name: name, password_set: true } });
     if (e1) return err('Could not save the password: '+e1.message);
-    const { error } = await sb.functions.invoke('admin-setup', { body:{ action:'claim_admin', full_name: name } });
-    if (error) return err(await fnErr(error));
+    const { data: me } = await sb.from('profiles').select('role').eq('id', data.user.id).maybeSingle();
+    if (me && me.role==='admin'){                                      // already the admin → just save the name
+      await sb.from('profiles').update({ full_name: name, approved: true }).eq('id', data.user.id);
+    } else {
+      const { error } = await sb.functions.invoke('admin-setup', { body:{ action:'claim_admin', full_name: name } });
+      if (error) return err(await fnErr(error));
+    }
     setupNeeded = false;
-    const { data } = await sb.auth.getUser();
     toast('Admin account ready'); await enterWithSupabaseUser(data.user);
   } catch(e){ err('Network problem – please try again.'); }
   finally { busy('gBtn', false, 'Save password and log in'); }
@@ -2213,11 +2217,14 @@ async function checkSession(){
   try {
     const { data } = await sb.auth.getSession();
     if (data && data.session && data.session.user){
-      if (AUTH_LINK==='magiclink' || AUTH_LINK==='email'){        // first admin came back from the sign-in email
-        const { data: me } = await sb.from('profiles').select('role,approved').eq('id', data.session.user.id).maybeSingle();
-        if (!me || me.role!=='admin'){ history.replaceState(null,'',location.pathname+location.search);
-          setupEmail = (data.session.user.email||'').toLowerCase(); setupNeeded = true; renderAuth('adminpw'); return; } }
       if (AUTH_LINK==='invite' || AUTH_LINK==='recovery'){ renderAuth('setpw', AUTH_LINK==='invite' ? 'Welcome! Create the password you will use to log in.' : 'Choose a new password.'); return; }
+      // Admin who arrived by the sign-in email (or was made admin without a password): set name + password first
+      const su = data.session.user;
+      if (!(su.user_metadata && su.user_metadata.password_set)){
+        const { data: me } = await sb.from('profiles').select('role').eq('id', su.id).maybeSingle();
+        if (AUTH_LINK==='magiclink' || AUTH_LINK==='email' || (me && me.role==='admin')){
+          history.replaceState(null,'',location.pathname+location.search);
+          setupEmail = (su.email||'').toLowerCase(); renderAuth('adminpw'); return; } }
       await enterWithSupabaseUser(data.session.user); return; }
   } catch(e){ console.warn('[AdmitConnect] session check failed', e); }
   renderAuth('login');
