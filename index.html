@@ -216,6 +216,8 @@ textarea,.db select{width:100%;padding:9px;border:1px solid var(--line);border-r
 .mc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
 .mc-right{border-left:1px solid var(--line,#e2e8f0);padding-left:18px;min-width:0}
 @media (max-width:960px){.mc-grid{grid-template-columns:1fr}.mc-right{border-left:0;padding-left:0;border-top:1px solid var(--line,#e2e8f0);padding-top:12px}}
+.rqd{color:#dc2626;font-weight:700;margin-left:2px}
+.mc-miss{outline:2px solid #dc2626;outline-offset:1px;border-radius:8px}
 .rchips{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
 .rchips button{padding:4px 10px;font-size:13px}
 .colrow{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;padding:7px 8px;border:1px solid var(--line,#e2e8f0);border-radius:8px;margin-bottom:6px;font-size:13px}
@@ -312,7 +314,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 18:45 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 18:55 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -1829,23 +1831,24 @@ function openManual(qi, callId, candId){
   box.innerHTML = `
     <div style="display:flex;align-items:center"><h2 style="margin:0;font-size:18px">${c?'✎ Edit call':'📞 Log manual call'}</h2><button class="x" onclick="closeMc()">×</button></div>
     <div class="muted" style="margin:4px 0 12px">${cand.name} · ${cand.masked} · ${domName(c?c.domain:cand.domain)} · Score <b>${cand.score}%</b> · ${cand.city}${c?' · '+c.id+(c.manual?'':' (bot call – admin edit)'):''}</div>
+    <div class="muted" style="font-size:12px;margin:-6px 0 10px"><span class="rqd">*</span> = required before saving (for answered calls). Everything else is optional.</div>
     <div class="mc-grid"><div>
     <div class="set" style="gap:10px">
-      <div style="grid-column:1/-1"><label>Call status</label>${rch('mStatus', Object.entries(STATUS).map(([k,o])=>[k,o.l]), v('status','answered'))}</div>
-      <div><label>Time of call</label><input id="mTime" type="time" value="${v('time',tnow)}"></div>
-      <div><label>Talk time (min)</label><input id="mDur" type="number" min="0" step="0.5" value="${c&&c.dur?(c.dur/60).toFixed(1):''}" placeholder="e.g. 3"></div>
-      <div><label>Language spoken</label><select id="mLang">${opt(LANGS.map(l=>[l.n,l.n]), v('lang',cand.lang))}</select></div>
-      <div><label>Interest level</label><select id="mLvl">${opt([['','Not captured'],['3','High'],['2','Medium'],['1','Low'],['0','Not interested']], v('lvl',''))}</select></div>
-      <div><label>Preferred district (Karnataka)</label><select id="mDist" onchange="mcCtx.dist=this.value;mcCtx.area='';renderArea();renderColleges()"><option value="">Any district</option>${KA_DISTRICTS.map(d=>`<option ${c&&c.locality&&c.locality.district===d?'selected':''}>${d}</option>`).join('')}</select></div>
+      <div style="grid-column:1/-1" id="fStatus"><label>Call status<span class="rqd">*</span></label>${rch('mStatus', Object.entries(STATUS).map(([k,o])=>[k,o.l]), v('status','answered'))}</div>
+      <div><label>Time of call<span class="rqd">*</span></label><input id="mTime" type="time" value="${v('time',tnow)}"></div>
+      <div><label>Talk time (min)<span class="rqd">*</span> <span class="muted" style="font-weight:400">(if answered)</span></label><input id="mDur" type="number" min="0" step="0.5" value="${c&&c.dur?(c.dur/60).toFixed(1):''}" placeholder="e.g. 3"></div>
+      <div><label>Language spoken<span class="rqd">*</span></label><select id="mLang"><option value="">— choose —</option>${opt(LANGS.map(l=>[l.n,l.n]), v('lang',cand.lang))}</select></div>
+      <div><label>Interest level<span class="rqd">*</span></label><select id="mLvl">${opt([['','— choose —'],['3','High'],['2','Medium'],['1','Low'],['0','Not interested']], v('lvl',''))}</select></div>
+      <div><label>Preferred district (Karnataka)<span class="rqd">*</span></label><select id="mDist" onchange="mcCtx.dist=this.value==='Any'?'':this.value;mcCtx.anyDist=this.value==='Any';mcCtx.area='';renderArea();renderColleges()"><option value="">— choose —</option><option value="Any" ${c&&c.locality&&c.locality.district==='Any district'?'selected':''}>Any district (no preference)</option>${KA_DISTRICTS.map(d=>`<option ${c&&c.locality&&c.locality.district===d?'selected':''}>${d}</option>`).join('')}</select></div>
       <div><label>Area <span class="muted" style="font-weight:400">(optional)</span></label><select id="mArea" onchange="mcCtx.area=this.value;renderColleges()"></select></div>
       <div><label>or PIN code <span class="muted" style="font-weight:400">(optional)</span></label><input id="mPin" inputmode="numeric" maxlength="6" placeholder="e.g. 560034" value="${c&&c.locality?esc(c.locality.pin||''):''}" oninput="onPin(this.value)"></div>
       <div style="display:flex;align-items:flex-end"><div id="mPinOut" class="muted" style="font-size:12px;padding-bottom:8px"></div></div>
-      <div style="grid-column:1/-1"><label>Course discussed <span class="muted" style="font-weight:400">(tick one or more)</span></label><div id="mCourseBox"></div></div>
-      <div style="grid-column:1/-1"><label>Candidate's message / query</label><textarea id="mMsg" rows="2" placeholder="What did the student or parent say? e.g. wants colleges near home, fees under 1.5 L…">${c&&c.query?esc(c.query.text):''}</textarea></div>
-      <div style="grid-column:1/-1"><label>Reverted back <span class="muted" style="font-weight:400">(leave empty = No)</span></label>${cbx('mRev', [['Call back','Call back'],['WhatsApp reply','WhatsApp'],['SMS reply','SMS']], c&&c.reverted?c.revertVia:'')}</div>
-      <div style="grid-column:1/-1"><label>Admission status <span class="muted" style="font-weight:400">(leave empty = Not converted)</span></label>${cbx('mAdm', ['In process','Joined','Dropped'].map(a=>[a,a]), ['In process','Joined','Dropped'].includes(v('admission',''))?v('admission',''):'', "document.getElementById('mColW').style.display=document.getElementById('mAdm').value?'':'none'")}</div>
+      <div style="grid-column:1/-1"><label>Course discussed<span class="rqd">*</span> <span class="muted" style="font-weight:400">(tick one or more)</span></label><div id="mCourseBox"></div></div>
+      <div style="grid-column:1/-1"><label>Candidate's message / query <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="mMsg" rows="2" placeholder="What did the student or parent say? e.g. wants colleges near home, fees under 1.5 L…">${c&&c.query?esc(c.query.text):''}</textarea></div>
+      <div style="grid-column:1/-1"><label>Reverted back <span class="muted" style="font-weight:400">(optional · empty = No)</span></label>${cbx('mRev', [['Call back','Call back'],['WhatsApp reply','WhatsApp'],['SMS reply','SMS']], c&&c.reverted?c.revertVia:'')}</div>
+      <div style="grid-column:1/-1"><label>Admission status <span class="muted" style="font-weight:400">(optional · empty = Not converted)</span></label>${cbx('mAdm', ['In process','Joined','Dropped'].map(a=>[a,a]), ['In process','Joined','Dropped'].includes(v('admission',''))?v('admission',''):'', "document.getElementById('mColW').style.display=document.getElementById('mAdm').value?'':'none'")}</div>
       <div id="mColW" style="grid-column:1/-1;${['Joined','In process','Dropped'].includes(v('admission',''))?'':'display:none'}"><label>College</label><select id="mCol" onchange="mcCtx.college=this.value"></select></div>
-      <div style="grid-column:1/-1"><label>Counsellor notes</label><textarea id="mNotes" rows="2" placeholder="Next step, call-back time…">${c?esc(c.notes||''):''}</textarea></div>
+      <div style="grid-column:1/-1"><label>Counsellor notes <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="mNotes" rows="2" placeholder="Next step, call-back time…">${c?esc(c.notes||''):''}</textarea></div>
     </div></div>
     <div class="mc-right" id="mcRight"></div></div>
     <div class="aerr" id="mErr"></div>
@@ -1855,7 +1858,7 @@ function openManual(qi, callId, candId){
   const d0 = DOMAINS.find(d=>d.id===start[0]) || COURSES[0];
   mcCtx.ticks = new Set(start); mcCtx.lv = d0.lv; mcCtx.stream = d0.lv==='pu' ? (d0.grp ? 'sci' : 'com') : null;
   mcCtx.college = c && c.college;
-  mcCtx.sug = new Set((c && c.suggested) || []); mcCtx.dist = (c && c.locality && c.locality.district) || ''; mcCtx.area = (c && c.locality && c.locality.area) || '';
+  mcCtx.sug = new Set((c && c.suggested) || []); mcCtx.anyDist = !!(c && c.locality && c.locality.district==='Any district'); mcCtx.dist = (c && c.locality && c.locality.district && !mcCtx.anyDist) ? c.locality.district : ''; mcCtx.area = (c && c.locality && c.locality.area) || '';
   mcCtx.f = mcCtx.f || {fee:'', fit:true, open:true, sort:'near', km:''};
   renderArea(); renderCourseBox();
   if (c && c.locality && c.locality.pin) onPin(c.locality.pin);
@@ -1876,7 +1879,7 @@ function onPin(v){
   const r = pinLookup(pin);
   if (!r){ out.innerHTML = '<span style="color:#dc2626">PIN not recognised – choose district / area instead</span>'; return; }
   mcCtx.dist = r.district; mcCtx.area = r.area;
-  document.getElementById('mDist').value = r.district; renderArea(); renderColleges();
+  document.getElementById('mDist').value = r.district; mcCtx.anyDist=false; renderArea(); renderColleges();
   out.innerHTML = `📍 <b>${pin}</b> = ${r.area ? esc(r.area)+', ' : ''}${esc(r.district)}${r.area?'':' (area not in our list)'}`;
 }
 function tickOne(cb){
@@ -1963,8 +1966,18 @@ function saveManual(){
   const {q, cand} = mcCtx; let c = mcCtx.c;
   const courses = COURSES.filter(d=>mcCtx.ticks.has(d.id)).map(d=>d.id);
   const st = g('mStatus'), durMin = parseFloat(g('mDur')||'0'), lvl = g('mLvl'), dom = courses[0] || cand.domain;
-  if (st==='answered' && !courses.length){ document.getElementById('mErr').textContent = 'Please tick at least one course discussed.'; return; }
-  if (st==='answered' && !durMin){ document.getElementById('mErr').textContent = 'Please enter the talk time for an answered call.'; return; }
+  // Required fields: status + time always; for answered calls also talk time, language, interest, district, course
+  document.querySelectorAll('#mcBox .mc-miss').forEach(x=>x.classList.remove('mc-miss'));
+  const miss = [], mark = (id,label) => { miss.push(label); const el=document.getElementById(id); if (el) el.classList.add('mc-miss'); };
+  if (!g('mTime')) mark('mTime','Time of call');
+  if (st==='answered'){
+    if (!durMin) mark('mDur','Talk time');
+    if (!g('mLang')) mark('mLang','Language spoken');
+    if (g('mLvl')==='') mark('mLvl','Interest level');
+    if (!g('mDist')) mark('mDist','Preferred district');
+    if (!courses.length) mark('mCourseBox','Course discussed');
+  }
+  if (miss.length){ document.getElementById('mErr').innerHTML = '⚠ Please fill the required fields: <b>'+miss.join(', ')+'</b>'; document.querySelector('#mcBox .mc-miss').scrollIntoView({block:'center',behavior:'smooth'}); return; }
   const by = role==='admin' ? (profile.name||'Admin') : cName(actingC);
   if (!c){   // new manual call (from queue or from a candidate)
     const att = q ? q.attempt : cand.calls.length+1;
@@ -1977,7 +1990,7 @@ function saveManual(){
   if (c.manual) c.by = c.by || by;
   c.editedBy = by;
   Object.assign(c, { status:st, time:g('mTime'), dur:Math.round(durMin*60), lang: st==='answered'||st==='disconnected' ? g('mLang') : null,
-    courses: st==='answered' ? courses : c.courses, suggested: [...mcCtx.sug], locality: (mcCtx.dist||mcCtx.area||g('mPin')) ? {district:mcCtx.dist, area:mcCtx.area, pin:g('mPin').replace(/\D/g,'')} : (c.locality||null),
+    courses: st==='answered' ? courses : c.courses, suggested: [...mcCtx.sug], locality: (mcCtx.dist||mcCtx.area||g('mPin')||mcCtx.anyDist) ? {district:mcCtx.dist||(mcCtx.anyDist?'Any district':''), area:mcCtx.area, pin:g('mPin').replace(/\D/g,'')} : (c.locality||null),
     chosenDom: st==='answered' ? dom : c.chosenDom, domain: st==='answered' ? dom : c.domain, lvl: lvl===''?null:+lvl,
     notes: g('mNotes'), reverted: !!g('mRev'), revertVia: g('mRev')||null, revertDate: g('mRev') ? (c.revertDate||TODAY) : null,
     reply: g('mRev') ? (c.reply||'Logged by counsellor') : null });
