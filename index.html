@@ -81,6 +81,28 @@ main{padding:18px 24px;min-width:0;grid-column:2}
 .sw .tr:after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--card);transition:.2s}
 .sw.on .tr{background:var(--brand)}
 .sw.on .tr:after{left:18px}
+/* ---------- Login / registration ---------- */
+.auth{position:fixed;inset:0;z-index:60;background:var(--bg);display:none;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.auth.on{display:flex}
+.abox{display:grid;grid-template-columns:1fr 1.1fr;width:880px;max-width:100%;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 20px 60px #0f172a26}
+.abrand{background:var(--side);color:#cbd5e1;padding:36px 32px;display:flex;flex-direction:column;gap:14px}
+.abrand h1{color:#fff;margin:0;font-size:28px}.abrand h1 span{color:#a5b4fc}
+.abrand li{margin:6px 0;font-size:14px}
+.aform{padding:32px}
+.atabs{display:flex;gap:4px;background:var(--soft);border-radius:10px;padding:4px;margin-bottom:18px}
+.atabs button{flex:1;border:none;background:none;padding:9px;border-radius:8px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
+.atabs button.on{background:var(--card);color:var(--brand);box-shadow:0 1px 3px #0001}
+.afield{margin-bottom:12px}
+.afield label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:500}
+.afield input,.afield select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font:inherit}
+.afield input:focus,.afield select:focus{outline:2px solid var(--brand2);border-color:var(--brand)}
+.aerr{color:#dc2626;font-size:12px;margin-top:4px;min-height:0}
+.abtn{width:100%;padding:11px;border:none;border-radius:9px;background:var(--brand);color:#fff;font:inherit;font-weight:600;cursor:pointer;margin-top:4px}
+.alink{color:var(--brand);cursor:pointer;font-weight:500}
+.anote{font-size:12px;color:#92400e;background:#fef3c7;border-radius:8px;padding:8px 10px;margin-top:14px}
+.logout{margin-top:8px;border:1px solid #334155;background:none;color:#cbd5e1;border-radius:7px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
+.logout:hover{background:var(--side2);color:#fff}
+@media(max-width:760px){.abox{grid-template-columns:1fr}.abrand{display:none}}
 /* Compact scoreboard */
 .sb{display:inline-flex;align-items:stretch;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;flex-wrap:nowrap;flex-shrink:0}
 .sb .hd{background:#111827;color:#fff;font-size:11px;font-weight:600;padding:6px 10px;display:flex;flex-direction:column;justify-content:center;line-height:1.25}
@@ -273,7 +295,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 15:20 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 15:40 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -337,6 +359,8 @@ aside{position:sticky}
 
 <!-- College seat modal -->
 <div class="modal" id="seatModal" onclick="if(event.target===this)closeSeat()"><div class="mbox" id="seatBox"></div></div>
+
+<div class="auth" id="auth"></div>
 
 <div id="toast" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:8px;display:none;z-index:40"></div>
 
@@ -732,11 +756,11 @@ let role = 'admin';   // demo roles: 'admin' | 'counsellor' | 'college'  (a live
 const ROLES = [['admin','admin_role','🛡'],['counsellor','couns_role','🎧'],['college','college_role','🏫']];
 // College shown in the college-partner view (demo default: the college with most joins this campaign)
 let myCollege = COLLEGE_LIST.map(c=>[c.name, calls.filter(x=>x.admission==='Joined'&&x.college===c.name).length]).sort((a,b)=>b[1]-a[1])[0][0];
-function setRole(r){
+function setRole(r, quiet){
   role = r; isAdmin = r==='admin';
   if (r==='college') curView = 'college';
   else if (curView==='college' || (!isAdmin && ADMIN_VIEWS.some(a=>a.id===curView))) curView = 'today';
-  toast({admin:'Administrator: full access', counsellor:'Counsellor: calls, candidates and basic settings', college:'College partner: own seat dashboard only'}[r]);
+  if (!quiet) toast({admin:'Administrator: full access', counsellor:'Counsellor: calls, candidates and basic settings', college:'College partner: own seat dashboard only'}[r]);
   renderAll();
 }
 function setCollege(n){ myCollege = n; renderAll(); }
@@ -785,7 +809,8 @@ function renderSide(){
   const navItem = (v,ic,label)=>`<div class="dom ${curView===v?'active':''}" title="${label}" onclick="setView('${v}')"><span class="ic">${ic}</span>${label}</div>`;
   document.getElementById('commonNav').innerHTML = `<div class="admbox">${isCol?navItem('college','🏫',T('college_dash')):''}${navItem('settings','⚙',T('settings'))}</div>`;
   const roleLbl = T(ROLES.find(r=>r[0]===role)[1]);
-  document.getElementById('who').innerHTML = `<div class="who">👤 <b>${profile.name||'Your name'}</b>${roleLbl}${isCol?' · '+myCollege:' · '+profile.id}</div>`;
+  document.getElementById('who').innerHTML = `<div class="who">👤 <b>${profile.name||'Your name'}</b>${roleLbl}${isCol?' · '+myCollege:' · '+profile.id}
+    ${profile.email?`<div style="font-size:11px;margin-top:2px">${profile.email}</div>`:''}<button class="logout" onclick="logout()" title="Log out">⎋ Log out</button></div>`;
   if (isCol){ document.getElementById('adminNav').innerHTML=''; return; }
   document.getElementById('secDom').textContent = T('domains');
   const act = id => curDom===id && !isAdminView() ? 'active' : '';
@@ -1675,10 +1700,110 @@ function fileChosen(inp){
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeDrawer(); closeSeat(); document.getElementById('upModal').classList.remove('on'); } });
 
+/* ================= Login & registration (demo) =================
+   No server: accounts live in THIS browser's storage only. Passwords are stored as a SHA-256 hash.
+   Real shared logins come with the backend (roadmap step 4). */
+const getUsers  = () => store.get('users', []);
+const saveUsers = u  => store.set('users', u);
+async function hashPw(pw){
+  try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ac:'+pw));
+        return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join(''); }
+  catch(e){ let h=0; for (const ch of 'ac:'+pw) h=(h*31+ch.charCodeAt(0))|0; return 'x'+h; }   // fallback if Web Crypto is unavailable
+}
+let authMode = 'login';
+const esc = t => String(t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function renderAuth(mode, msg){
+  authMode = mode || authMode;
+  const roleOpts = ROLES.map(([id,k,ic])=>`<option value="${id}" ${id==='counsellor'?'selected':''}>${ic} ${T(k)}</option>`).join('');
+  document.getElementById('auth').innerHTML = `<div class="abox">
+    <div class="abrand"><h1>Admit<span>Connect</span></h1>
+      <div>Admission counselling · bot calls · WhatsApp/SMS follow-ups</div>
+      <ul style="padding-left:18px;margin:6px 0"><li>Bot calls every student on your course lists</li><li>Track interest, replies and admissions with proof</li><li>Colleges see their own seat status</li></ul>
+      <div style="margin-top:auto;font-size:12px;color:#94a3b8">Demo · mock data · <span id="verStampA"></span></div></div>
+    <div class="aform">
+      <div class="atabs"><button class="${authMode==='login'?'on':''}" onclick="renderAuth('login')">Log in</button><button class="${authMode==='register'?'on':''}" onclick="renderAuth('register')">Register</button></div>
+      ${msg?`<div class="note" style="margin:0 0 12px;background:#ecfdf5;color:#065f46">${msg}</div>`:''}
+      ${authMode==='login' ? `
+      <form onsubmit="event.preventDefault();doLogin()">
+        <div class="afield"><label>Email or phone number</label><input id="lId" autocomplete="username" placeholder="name@example.com or 98XXXXXXXX"></div>
+        <div class="afield"><label>Password</label><input id="lPw" type="password" autocomplete="current-password" placeholder="Your password"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:-2px 0 10px">
+          <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="lRem" checked> Keep me logged in</label>
+          <span class="alink" onclick="toast('Password reset needs the backend (Phase 2). For now, register again with a new email.')">Forgot password?</span></div>
+        <div class="aerr" id="lErr"></div>
+        <button class="abtn" type="submit">Log in</button>
+      </form>
+      <div style="text-align:center;font-size:13px;margin-top:12px">New here? <span class="alink" onclick="renderAuth('register')">Create an account</span></div>
+      <div style="text-align:center;margin-top:10px"><span class="alink" style="font-size:13px" onclick="demoLogin()">Continue as demo user (Admin) →</span></div>` : `
+      <form onsubmit="event.preventDefault();doRegister()">
+        <div class="afield"><label>Full name</label><input id="rName" autocomplete="name" placeholder="e.g. Karthik S"></div>
+        <div class="afield"><label>Email ID</label><input id="rEmail" type="email" autocomplete="email" placeholder="name@example.com"></div>
+        <div class="afield"><label>Phone number</label><div style="display:flex;gap:6px"><input value="+91" disabled style="width:64px;text-align:center"><input id="rPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"></div></div>
+        <div class="afield"><label>Role</label><select id="rRole" onchange="document.getElementById('rColWrap').style.display=this.value==='college'?'':'none'">${roleOpts}</select></div>
+        <div class="afield" id="rColWrap" style="display:none"><label>College</label><select id="rCol">${collegeOptions(myCollege)}</select></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="afield"><label>Password</label><input id="rPw" type="password" autocomplete="new-password" placeholder="Min 8, letters + numbers"></div>
+          <div class="afield"><label>Confirm password</label><input id="rPw2" type="password" autocomplete="new-password" placeholder="Repeat password"></div></div>
+        <div class="aerr" id="rErr"></div>
+        <button class="abtn" type="submit">Create account</button>
+      </form>
+      <div style="text-align:center;font-size:13px;margin-top:12px">Already registered? <span class="alink" onclick="renderAuth('login')">Log in</span></div>`}
+      <div class="anote">Demo only: accounts are saved in this browser, not on a server. Don't use a real password.</div>
+    </div></div>`;
+  const vs = document.getElementById('verStamp'); if (vs) document.getElementById('verStampA').textContent = vs.textContent;
+  document.getElementById('auth').classList.add('on');
+}
+async function doRegister(){
+  const v = id => document.getElementById(id).value.trim(), err = m => (document.getElementById('rErr').textContent = m, false);
+  const name=v('rName'), email=v('rEmail').toLowerCase(), phone=v('rPhone').replace(/\D/g,''), pw=document.getElementById('rPw').value, pw2=document.getElementById('rPw2').value, rl=v('rRole');
+  if (name.length<2) return err('Please enter your full name.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return err('Please enter a valid email ID.');
+  if (!/^[6-9]\d{9}$/.test(phone)) return err('Phone number must be a 10-digit Indian mobile number (starts with 6–9).');
+  if (pw.length<8 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)) return err('Password must be at least 8 characters with letters and numbers.');
+  if (pw!==pw2) return err('The two passwords do not match.');
+  const users = getUsers();
+  if (users.some(u=>u.email===email)) return err('An account with this email already exists – please log in.');
+  if (users.some(u=>u.phone===phone)) return err('An account with this phone number already exists – please log in.');
+  const u = {id:'U'+String(users.length+1).padStart(3,'0'), name, email, phone, role:rl, college: rl==='college'?v('rCol'):null, pw: await hashPw(pw), created: new Date().toISOString()};
+  users.push(u); saveUsers(users);
+  renderAuth('login', `✔ Account created for <b>${esc(name)}</b>. Please log in.`);
+  document.getElementById('lId').value = email;
+}
+async function doLogin(){
+  const idv = document.getElementById('lId').value.trim().toLowerCase().replace(/^\+91/,''), pw = document.getElementById('lPw').value;
+  const u = getUsers().find(x=>x.email===idv || x.phone===idv.replace(/\D/g,''));
+  if (!u || u.pw !== await hashPw(pw)){ document.getElementById('lErr').textContent = 'Email/phone or password is incorrect.'; return; }
+  const rem = document.getElementById('lRem').checked;
+  store.set('session', rem ? {uid:u.id} : null);
+  try { sessionStorage.setItem('ac_session', JSON.stringify({uid:u.id})); } catch(e){}
+  startSession(u);
+}
+function demoLogin(){ startSession({id:'DEMO', name:'Demo Admin', email:'demo@admitconnect.example', phone:'9800000000', role:'admin'}); }
+function startSession(u){
+  profile = {...profile, name:u.name, email:u.email, phone:u.phone, id:u.id};
+  store.set('profile', profile);
+  if (u.college) myCollege = u.college;
+  document.getElementById('auth').classList.remove('on');
+  setRole(u.role || 'counsellor', true);
+  toast('Welcome, '+u.name.split(' ')[0]+'!');
+}
+function logout(){
+  store.set('session', null); try { sessionStorage.removeItem('ac_session'); } catch(e){}
+  if (simTimer){ clearInterval(simTimer); simTimer=null; }
+  renderAuth('login', 'You have been logged out.');
+}
+function checkSession(){
+  let sess = store.get('session', null);
+  if (!sess){ try { sess = JSON.parse(sessionStorage.getItem('ac_session')||'null'); } catch(e){} }
+  const u = sess && getUsers().find(x=>x.id===sess.uid);
+  if (u) startSession(u); else renderAuth('login');
+}
+
 STATE = {today:todayS, log:logF, adm:admF, cand:candS, msg:msgF};
 applyPin();
 FILL  = {today:()=>renderView(), log:fillRows, adm:fillAdmRows, cand:()=>renderView(), msg:fillMsgRows};
 renderAll();
+checkSession();
 </script>
 </body>
 </html>
