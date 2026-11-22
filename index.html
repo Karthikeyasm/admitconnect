@@ -271,7 +271,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 15:05 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 15:10 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -627,11 +627,12 @@ function genMsgs(c){
   else if ((c.status==='not_picked' || c.status==='disconnected') && rnd()<.6) tpl = 'missed';
   if (!tpl) return;
   const base = c.lvl ?? 1;                       // interest from the call guides the reply mix
+  const channel = rnd()<.75 ? 'WhatsApp' : 'SMS';   // one channel per message thread: the follow-up uses the same channel as Step 1
   let att = 0, day = di, cont = true;
   while (cont && att<2 && day<=LASTD){
     att++;
     const [h,mi] = c.time.split(':').map(Number), tmin = h*60+mi+5+Math.floor(rnd()*20) + (att>1?Math.floor(rnd()*120):0);
-    const m = { id:'MSG-'+(msgNo++), cand:c.cand, call:c, domain:c.domain, college:c.college, channel: rnd()<.75?'WhatsApp':'SMS',
+    const m = { id:'MSG-'+(msgNo++), cand:c.cand, call:c, domain:c.domain, college:c.college, channel,
       tpl: att>1?'reminder':tpl, date:DAYS[day], time:String(Math.min(19,Math.floor(tmin/60))).padStart(2,'0')+':'+String(tmin%60).padStart(2,'0'), attempt:att,
       status:null, resp:null, reverted:false, viewedAfter:2+Math.floor(rnd()*90) };
     const pRep = base>=3?.45 : base===2?.35 : .12;
