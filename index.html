@@ -312,7 +312,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 18:20 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 18:45 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -777,7 +777,34 @@ const KA_DISTRICTS = ['Bagalkot','Ballari','Belagavi','Bengaluru Rural','Bengalu
   'Shivamogga','Tumakuru','Udupi','Uttara Kannada','Vijayanagara','Vijayapura','Yadgir'];
 // Mock: where each college is (most partner colleges in Bengaluru, rest in big district towns) – from the name, no RNG change
 const MOCK_COL_DIST = ['Bengaluru Urban','Bengaluru Urban','Bengaluru Urban','Bengaluru Urban','Bengaluru Rural','Mysuru','Mysuru','Dakshina Kannada','Dharwad','Belagavi','Tumakuru','Shivamogga','Udupi','Davanagere','Kalaburagi'];
-COLLEGE_LIST.forEach(x=>{ let h=7; for (const ch of x.name) h=(h*131+ch.charCodeAt(0))>>>0; x.district = MOCK_COL_DIST[h % MOCK_COL_DIST.length]; });
+// Bengaluru areas (zone used for "nearby") with main PIN codes – starter list, extend as needed
+// [zone, area, main PIN, approx. latitude, longitude of the area centre]
+const BLR_AREAS = [
+  ['Central','MG Road','560001',12.975,77.606],['Central','Ulsoor','560008',12.981,77.620],['Central','Frazer Town','560005',12.997,77.613],
+  ['South','Basavanagudi','560004',12.942,77.575],['South','Jayanagar','560011',12.925,77.593],['South','JP Nagar','560078',12.906,77.585],['South','Banashankari','560050',12.925,77.546],['South','BTM Layout','560076',12.916,77.610],
+  ['South-East','Koramangala','560034',12.935,77.624],['South-East','HSR Layout','560102',12.912,77.638],['South-East','Bellandur','560103',12.926,77.676],['South-East','Electronic City','560100',12.845,77.660],
+  ['East','Indiranagar','560038',12.978,77.640],['East','Marathahalli','560037',12.959,77.697],['East','Whitefield','560066',12.970,77.750],
+  ['North','Hebbal','560024',13.035,77.597],['North','RT Nagar','560032',13.021,77.595],['North','Yelahanka','560064',13.100,77.596],
+  ['West','Malleshwaram','560003',13.003,77.570],['West','Rajajinagar','560010',12.991,77.555],['West','Yeshwanthpur','560022',13.028,77.540],['West','Vijayanagar','560040',12.971,77.537],['West','Peenya','560058',13.030,77.520],['West','Kengeri','560060',12.912,77.483]
+].map(([zone,name,pin,lat,lng])=>({zone,name,pin,lat,lng}));
+const kmBetween = (a,b) => { const R=6371, r=Math.PI/180, dLa=(b.lat-a.lat)*r, dLo=(b.lng-a.lng)*r;
+  const h=Math.sin(dLa/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
+const fmtKm = k => k<1 ? Math.max(50, Math.round(k*1000/50)*50)+' m' : k.toFixed(1)+' km';
+const PIN_PREFIX = {'560':'Bengaluru Urban','570':'Mysuru','572':'Tumakuru','575':'Dakshina Kannada','576':'Udupi','580':'Dharwad','585':'Kalaburagi','590':'Belagavi'};
+function pinLookup(pin){
+  const a = BLR_AREAS.find(x=>x.pin===pin);
+  if (a) return {district:'Bengaluru Urban', area:a.name};
+  const d = PIN_PREFIX[pin.slice(0,3)]; return d ? {district:d, area:''} : null;
+}
+// Mock: ~60% of each course's colleges in Bengaluru (spread over areas), the rest in district towns – from the name, no RNG change
+const _perDom = {};
+COLLEGE_LIST.forEach(x=>{ let h=7; for (const ch of x.name) h=(h*131+ch.charCodeAt(0))>>>0;
+  const k = _perDom[x.domain] = (_perDom[x.domain]||0)+1;
+  x.district = k<=Math.max(3, Math.ceil(COLLEGE_CFG[x.domain].n*0.6)) ? 'Bengaluru Urban' : MOCK_COL_DIST[h % MOCK_COL_DIST.length];
+  if (x.district==='Bengaluru Urban'){ const a = BLR_AREAS[(h + k*7) % BLR_AREAS.length]; x.area = a.name;
+    const ang = (h % 360) * Math.PI/180, km = 0.2 + (h % 17)/10;              // mock spot 0.2–1.8 km from the area centre
+    x.lat = a.lat + km/111*Math.cos(ang); x.lng = a.lng + km/(111*Math.cos(a.lat*Math.PI/180))*Math.sin(ang); } });
+const areaZone = n => (BLR_AREAS.find(a=>a.name===n)||{}).zone;
 const SEAT_ST = {'Full':{c:'#dc2626',bg:'#fee2e2'},'Almost full':{c:'#d97706',bg:'#fef3c7'},'Open':{c:'#16a34a',bg:'#dcfce7'}};
 
 /* ---------------- State ---------------- */
@@ -1381,7 +1408,7 @@ function openCall(id){
       <div><label>Date & time</label>${fmtD(c.date)} 2026, ${c.time}</div>
       <div><label>Listened</label>${mmss(c.dur)} of ${mmss(SCRIPT_SEC)} (${pct(c.dur,SCRIPT_SEC)}%) · ${c.dur?(c.completed?'✔ Completed':'✖ Not completed'):'—'}</div>
       <div><label>Language chosen</label>${c.lang||'<span class="muted">— (Excel: '+c.cand.lang+')</span>'}</div>
-      <div><label>Course chosen on call</label>${c.courses&&c.courses.length>1?c.courses.map(shortDom).join(', '):c.chosenDom?shortDom(c.chosenDom):'<span class="muted">—</span>'}${c.locality?`<div style="margin-top:4px;font-size:12px">📍 Wants: ${esc([c.locality.area,c.locality.district].filter(Boolean).join(', '))}</div>`:''}${c.suggested&&c.suggested.length?`<div style="margin-top:4px;font-size:12px">🏫 Suggested: ${c.suggested.map(esc).join(', ')}</div>`:''}
+      <div><label>Course chosen on call</label>${c.courses&&c.courses.length>1?c.courses.map(shortDom).join(', '):c.chosenDom?shortDom(c.chosenDom):'<span class="muted">—</span>'}${c.locality?`<div style="margin-top:4px;font-size:12px">📍 Wants: ${esc([c.locality.area,c.locality.district,c.locality.pin].filter(Boolean).join(', '))}</div>`:''}${c.suggested&&c.suggested.length?`<div style="margin-top:4px;font-size:12px">🏫 Suggested: ${c.suggested.map(esc).join(', ')}</div>`:''}
         ${c.chosenDom&&c.chosenDom!==c.excelDomain?`<div style="margin-top:4px"><span class="warn">⚠ Excel says ${shortDom(c.excelDomain)}</span></div>`:''}</div>
       <div><label>Last exam score</label>${c.cand.score}%</div>
       <div><label>College offered</label>${c.college||'<span class="muted">—</span>'}</div>
@@ -1809,8 +1836,10 @@ function openManual(qi, callId, candId){
       <div><label>Talk time (min)</label><input id="mDur" type="number" min="0" step="0.5" value="${c&&c.dur?(c.dur/60).toFixed(1):''}" placeholder="e.g. 3"></div>
       <div><label>Language spoken</label><select id="mLang">${opt(LANGS.map(l=>[l.n,l.n]), v('lang',cand.lang))}</select></div>
       <div><label>Interest level</label><select id="mLvl">${opt([['','Not captured'],['3','High'],['2','Medium'],['1','Low'],['0','Not interested']], v('lvl',''))}</select></div>
-      <div><label>Preferred district (Karnataka)</label><select id="mDist" onchange="mcCtx.dist=this.value;renderColleges()"><option value="">Any district</option>${KA_DISTRICTS.map(d=>`<option ${c&&c.locality&&c.locality.district===d?'selected':''}>${d}</option>`).join('')}</select></div>
-      <div><label>Area / locality</label><input id="mArea" placeholder="e.g. Jayanagar, near home, hostel needed" value="${c&&c.locality?esc(c.locality.area||''):''}"></div>
+      <div><label>Preferred district (Karnataka)</label><select id="mDist" onchange="mcCtx.dist=this.value;mcCtx.area='';renderArea();renderColleges()"><option value="">Any district</option>${KA_DISTRICTS.map(d=>`<option ${c&&c.locality&&c.locality.district===d?'selected':''}>${d}</option>`).join('')}</select></div>
+      <div><label>Area <span class="muted" style="font-weight:400">(optional)</span></label><select id="mArea" onchange="mcCtx.area=this.value;renderColleges()"></select></div>
+      <div><label>or PIN code <span class="muted" style="font-weight:400">(optional)</span></label><input id="mPin" inputmode="numeric" maxlength="6" placeholder="e.g. 560034" value="${c&&c.locality?esc(c.locality.pin||''):''}" oninput="onPin(this.value)"></div>
+      <div style="display:flex;align-items:flex-end"><div id="mPinOut" class="muted" style="font-size:12px;padding-bottom:8px"></div></div>
       <div style="grid-column:1/-1"><label>Course discussed <span class="muted" style="font-weight:400">(tick one or more)</span></label><div id="mCourseBox"></div></div>
       <div style="grid-column:1/-1"><label>Candidate's message / query</label><textarea id="mMsg" rows="2" placeholder="What did the student or parent say? e.g. wants colleges near home, fees under 1.5 L…">${c&&c.query?esc(c.query.text):''}</textarea></div>
       <div style="grid-column:1/-1"><label>Reverted back <span class="muted" style="font-weight:400">(leave empty = No)</span></label>${cbx('mRev', [['Call back','Call back'],['WhatsApp reply','WhatsApp'],['SMS reply','SMS']], c&&c.reverted?c.revertVia:'')}</div>
@@ -1826,10 +1855,29 @@ function openManual(qi, callId, candId){
   const d0 = DOMAINS.find(d=>d.id===start[0]) || COURSES[0];
   mcCtx.ticks = new Set(start); mcCtx.lv = d0.lv; mcCtx.stream = d0.lv==='pu' ? (d0.grp ? 'sci' : 'com') : null;
   mcCtx.college = c && c.college;
-  mcCtx.sug = new Set((c && c.suggested) || []); mcCtx.dist = (c && c.locality && c.locality.district) || '';
-  mcCtx.f = mcCtx.f || {fee:'', fit:true, open:true, sort:'rec'};
-  renderCourseBox();
+  mcCtx.sug = new Set((c && c.suggested) || []); mcCtx.dist = (c && c.locality && c.locality.district) || ''; mcCtx.area = (c && c.locality && c.locality.area) || '';
+  mcCtx.f = mcCtx.f || {fee:'', fit:true, open:true, sort:'near', km:''};
+  renderArea(); renderCourseBox();
+  if (c && c.locality && c.locality.pin) onPin(c.locality.pin);
   document.getElementById('mcModal').classList.add('on');
+}
+function renderArea(){
+  const el = document.getElementById('mArea'); if (!el) return;
+  const d = mcCtx.dist;
+  if (d==='Bengaluru Urban'){
+    const zones = [...new Set(BLR_AREAS.map(a=>a.zone))];
+    el.innerHTML = `<option value="">Anywhere in Bengaluru</option>` + zones.map(z=>`<optgroup label="${z} Bengaluru">${BLR_AREAS.filter(a=>a.zone===z).map(a=>`<option ${a.name===mcCtx.area?'selected':''} value="${a.name}">${a.name} (${a.pin})</option>`).join('')}</optgroup>`).join('');
+    el.disabled = false;
+  } else { el.innerHTML = `<option value="">${d ? 'Anywhere in '+d : 'Choose a district first'}</option>`; el.disabled = true; mcCtx.area=''; }
+}
+function onPin(v){
+  const pin = v.replace(/\D/g,''), out = document.getElementById('mPinOut');
+  if (pin.length<6){ out.textContent = pin ? 'Enter all 6 digits' : ''; return; }
+  const r = pinLookup(pin);
+  if (!r){ out.innerHTML = '<span style="color:#dc2626">PIN not recognised – choose district / area instead</span>'; return; }
+  mcCtx.dist = r.district; mcCtx.area = r.area;
+  document.getElementById('mDist').value = r.district; renderArea(); renderColleges();
+  out.innerHTML = `📍 <b>${pin}</b> = ${r.area ? esc(r.area)+', ' : ''}${esc(r.district)}${r.area?'':' (area not in our list)'}`;
 }
 function tickOne(cb){
   document.querySelectorAll(`input[data-g="${cb.dataset.g}"]`).forEach(x=>{ if (x!==cb) x.checked=false; });
@@ -1845,36 +1893,51 @@ function renderColleges(){
   const el = document.getElementById('mcRight'); if (!el) return;
   const f = mcCtx.f, score = +mcCtx.cand.score, ids = [...mcCtx.ticks];
   if (!ids.length){ el.innerHTML = '<div class="muted" style="font-size:13px;margin-top:30px;text-align:center">🏫 Tick a course on the left to see matching colleges.</div>'; return; }
-  let rows = COLLEGE_LIST.filter(x=>ids.includes(x.domain)).map(seatRow).map(r=>({...r, fits: score>=r.minScore}));
+  let rows = COLLEGE_LIST.filter(x=>ids.includes(x.domain)).map(seatRow).map(r=>({...r, fits: score>=r.minScore, km:null}));
   const all = rows.length;
+  // Location: exact area → same zone ("nearby") → whole district → all of Karnataka
+  let where = '', distNote = '';
   const inDist = mcCtx.dist ? rows.filter(r=>r.district===mcCtx.dist) : rows;
-  if (mcCtx.dist && inDist.length) rows = inDist;
-  const distNote = mcCtx.dist ? (inDist.length ? '' : `<div class="note" style="margin:0 0 8px;font-size:12px">No partner college in <b>${esc(mcCtx.dist)}</b> for this course yet – showing all districts.</div>`) : '';
+  if (mcCtx.dist && !inDist.length) distNote = `No partner college in <b>${esc(mcCtx.dist)}</b> for this course yet – showing all districts.`;
+  else if (mcCtx.dist){
+    rows = inDist; where = ' in '+esc(mcCtx.dist);
+    if (mcCtx.area){
+      const at = BLR_AREAS.find(x=>x.name===mcCtx.area);
+      rows.forEach(r=>{ r.km = r.lat ? kmBetween(at, r) : null; });
+      if (f.km) rows = rows.filter(r=>r.km!==null && r.km<=+f.km);
+      where = ' near '+esc(mcCtx.area);
+    }
+  }
+  distNote = distNote ? `<div class="note" style="margin:0 0 8px;font-size:12px">${distNote}</div>` : '';
   if (f.fee) rows = rows.filter(r=>r.fee<=+f.fee);
   if (f.fit) rows = rows.filter(r=>r.fits);
   if (f.open) rows = rows.filter(r=>r.rem>0);
   const recScore = r => (r.fits?0:100) + (r.rem>0?0:50) + r.fee*3 - Math.min(10, score-r.minScore)/5;
-  rows.sort(f.sort==='fee' ? (a,b)=>a.fee-b.fee : f.sort==='seats' ? (a,b)=>b.rem-a.rem : (a,b)=>recScore(a)-recScore(b));
+  const byKm = mcCtx.area && f.sort!=='fee' && f.sort!=='seats' && f.sort!=='rec';
+  rows.sort(byKm ? (a,b)=>(a.km??999)-(b.km??999) : f.sort==='fee' ? (a,b)=>a.fee-b.fee : f.sort==='seats' ? (a,b)=>b.rem-a.rem : (a,b)=>recScore(a)-recScore(b));
   const rec = new Set(rows.filter(r=>r.fits && r.rem>0).slice(0,3).map(r=>r.name));
   const sel = (k,arr) => `<select style="width:auto;padding:4px 6px;font-size:13px" onchange="mcCtx.f.${k}=this.value;renderColleges()">${arr.map(([v,l])=>`<option value="${v}" ${String(f[k])===String(v)?'selected':''}>${l}</option>`).join('')}</select>`;
   const tick = (k,l) => `<label style="display:inline-flex;gap:5px;align-items:center;font-size:13px;font-weight:400;width:auto;margin:0;color:inherit"><input type="checkbox" style="width:15px;height:15px;margin:0" ${f[k]?'checked':''} onchange="mcCtx.f.${k}=this.checked;renderColleges()"> ${l}</label>`;
   const seatsLeft = rows.reduce((a,r)=>a+r.rem,0), openN = rows.filter(r=>r.st==='Open').length, almost = rows.filter(r=>r.st==='Almost full').length, full = rows.filter(r=>r.st==='Full').length;
   const cheapest = rows.length ? Math.min(...rows.map(r=>r.fee)) : 0;
+  const near = byKm && rows[0] && rows[0].km!=null ? ` Nearest: <b>${esc(rows[0].name)}</b> (${fmtKm(rows[0].km)}).` : '';
   const summary = rows.length ? `<div class="note" style="margin:0 0 8px;font-size:13px;background:#eef2ff;color:#3730a3">
-      <b>${rows.length} college${rows.length>1?'s':''}</b>${mcCtx.dist&&inDist.length?' in '+esc(mcCtx.dist):''} · <b>${seatsLeft} seats pending</b> for our students (${[openN&&openN+' open', almost&&almost+' almost full', full&&full+' full'].filter(Boolean).join(', ')}).<br>Fees from ₹${cheapest.toFixed(2)} L/yr.${rows[0]?` Best match: <b>${esc(rows[0].name)}</b> (${rows[0].rem} seats left).`:''}</div>` : '';
+      <b>${rows.length} college${rows.length>1?'s':''}</b>${where} · <b>${seatsLeft} seats pending</b> for our students (${[openN&&openN+' open', almost&&almost+' almost full', full&&full+' full'].filter(Boolean).join(', ')}).<br>Fees from ₹${cheapest.toFixed(2)} L/yr.${near || (rows[0]?` Best match: <b>${esc(rows[0].name)}</b> (${rows[0].rem} seats left).`:'')}</div>` : '';
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px"><b>🏫 Colleges for ${ids.map(shortDom).join(', ')}</b><span class="sp"></span><span class="muted" style="font-size:12px">${rows.length} of ${all}</span></div>
     <div style="display:flex;gap:8px 12px;flex-wrap:wrap;align-items:center;margin:8px 0 10px">
       ${sel('fee',[['','Any fee'],['1','≤ ₹1 L/yr'],['1.5','≤ ₹1.5 L/yr'],['2','≤ ₹2 L/yr'],['3','≤ ₹3 L/yr'],['5','≤ ₹5 L/yr']])}
-      ${sel('sort',[['rec','⭐ Recommended first'],['fee','Lowest fee'],['seats','Most seats left']])}
+      ${sel('sort',[...(mcCtx.area?[['near','📍 Nearest first']]:[]),['rec','⭐ Recommended first'],['fee','Lowest fee'],['seats','Most seats left']])}
+      ${mcCtx.area?sel('km',[['','Any distance'],['1','Within 1 km'],['2','Within 2 km'],['5','Within 5 km'],['10','Within 10 km']]):''}
       ${tick('fit','Fits score ('+score+'%)')} ${tick('open','Seats open')}</div>${distNote}${summary}
+    ${rows.length?`<div class="muted" style="font-size:12px;margin:-2px 0 6px" title="Order of this list">ⓘ ${byKm?'Listed <b>nearest to farthest</b> from '+esc(mcCtx.area)+' (straight-line distance).':f.sort==='fee'?'Listed by lowest fee.':f.sort==='seats'?'Listed by most seats left.':'Listed by best fit (score, seats, fee).'+(mcCtx.dist==='Bengaluru Urban'&&!mcCtx.area?' Choose an area or PIN to sort by distance.':'')}</div>`:''}
     <div style="max-height:52vh;overflow:auto">${rows.length ? rows.map(r=>`
       <div class="colrow${mcCtx.sug.has(r.name)?' sug':''}${r.fits?'':' dim'}">
         <input type="checkbox" title="Suggested to the candidate" style="width:16px;height:16px;margin:0" ${mcCtx.sug.has(r.name)?'checked':''} onchange="this.checked?mcCtx.sug.add(this.dataset.n):mcCtx.sug.delete(this.dataset.n);renderColleges();renderCourseBox(true)" data-n="${esc(r.name)}">
-        <div><b>${rec.has(r.name)?'⭐ ':''}${esc(r.name)}</b><div class="muted" style="font-size:12px">📍 ${r.district} · ${shortDom(r.domain)} · Min score ${r.minScore}%${r.fits?'':' <span style="color:#dc2626">(above candidate)</span>'}</div></div>
-        <div style="text-align:right"><b>₹${r.fee.toFixed(2)} L</b><span class="muted">/yr</span><div><span class="pill" style="color:${SEAT_ST[r.st].c};background:${SEAT_ST[r.st].bg}">${r.rem} seats · ${r.st}</span></div></div>
+        <div><b>${rec.has(r.name)?'⭐ ':''}${esc(r.name)}</b><div class="muted" style="font-size:12px">📍 ${r.area?esc(r.area)+', ':''}${r.district} · ${shortDom(r.domain)} · Min score ${r.minScore}%${r.fits?'':' <span style="color:#dc2626">(above candidate)</span>'}</div></div>
+        <div style="text-align:right">${r.km!=null&&mcCtx.area?`<div style="font-size:12px;color:#2563eb;font-weight:600">📍 ${fmtKm(r.km)}</div>`:''}<b>₹${r.fee.toFixed(2)} L</b><span class="muted">/yr</span><div><span class="pill" style="color:${SEAT_ST[r.st].c};background:${SEAT_ST[r.st].bg}">${r.rem} seats · ${r.st}</span></div></div>
       </div>`).join('') : '<div class="muted" style="font-size:13px">No college matches these filters. Try a higher fee limit or untick "Fits score".</div>'}</div>
-    <div class="muted" style="font-size:12px;margin-top:6px">⭐ = best fit (score fits, seats open, lower fee). Tick a college to mark it as <b>suggested</b> to the candidate – it is saved with the call and listed first under Admission › College. Fees, seats and minimum scores are mock values.</div>`;
+    <div class="muted" style="font-size:12px;margin-top:6px">⭐ = best fit (score fits, seats open, lower fee). Tick a college to mark it as <b>suggested</b> to the candidate – it is saved with the call and listed first under Admission › College. Fees, seats, minimum scores, college locations and distances are mock values.</div>`;
 }
 function mcCourses(){   // courses shown for the chosen level / stream
   return COURSES.filter(d=>d.lv===mcCtx.lv && (mcCtx.lv!=='pu' || (mcCtx.stream==='sci' ? d.grp==='pu_sci' : !d.grp)));
@@ -1914,7 +1977,7 @@ function saveManual(){
   if (c.manual) c.by = c.by || by;
   c.editedBy = by;
   Object.assign(c, { status:st, time:g('mTime'), dur:Math.round(durMin*60), lang: st==='answered'||st==='disconnected' ? g('mLang') : null,
-    courses: st==='answered' ? courses : c.courses, suggested: [...mcCtx.sug], locality: (g('mDist')||g('mArea').trim()) ? {district:g('mDist'), area:g('mArea').trim()} : (c.locality||null),
+    courses: st==='answered' ? courses : c.courses, suggested: [...mcCtx.sug], locality: (mcCtx.dist||mcCtx.area||g('mPin')) ? {district:mcCtx.dist, area:mcCtx.area, pin:g('mPin').replace(/\D/g,'')} : (c.locality||null),
     chosenDom: st==='answered' ? dom : c.chosenDom, domain: st==='answered' ? dom : c.domain, lvl: lvl===''?null:+lvl,
     notes: g('mNotes'), reverted: !!g('mRev'), revertVia: g('mRev')||null, revertDate: g('mRev') ? (c.revertDate||TODAY) : null,
     reply: g('mRev') ? (c.reply||'Logged by counsellor') : null });
