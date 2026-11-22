@@ -602,11 +602,14 @@ const parentName = c => PARENT_FIRST[(+c.id.slice(1)) % PARENT_FIRST.length] + '
 const offerWhere = d => levelOf(d)==='pu' ? 'top Bangalore PU colleges with JEE / NEET coaching' : `top Bangalore ${shortDom(d)} colleges`;
 const msgBody = (m, intro) => `Hi ${parentName(m.cand)},\n\n${intro}\n\nThrough ${BRAND}, you get ${OFFER} off the admission fee at ${offerWhere(m.domain)}. There is no catch and no extra charge for you.\n\nWant to see which colleges suit ${m.cand.name.split(' ')[0]}'s marks and goals?\n\nReply SHOW ME 👇`;
 const MTPL = {
-  details: {l:'College offer', t:(m)=>msgBody(m, 'Most parents pay the full fee without knowing there is a way around it. 🤔')},
-  missed:  {l:'Missed-call follow-up', t:(m)=>msgBody(m, `We tried calling you about ${m.cand.name.split(' ')[0]}'s admission. Most parents pay the full fee without knowing there is a way around it. 🤔`)},
-  reminder:{l:'Reminder', t:(m)=>msgBody(m, `Quick reminder: seats are filling fast${m.college?' at '+m.college:''}. Most parents still pay the full fee. 🤔`)}
+  // Step 1 – first message: always the standard text (sent after an answered OR a missed call)
+  details: {l:'Step 1 · First message (after call)', t:(m)=>msgBody(m, 'Most parents pay the full fee without knowing there is a way around it. 🤔')},
+  missed:  {l:'Step 1 · First message (after missed call)', t:(m)=>msgBody(m, 'Most parents pay the full fee without knowing there is a way around it. 🤔')},
+  // Step 2 – follow-up: only when the first message got no response
+  reminder:{l:'Step 2 · Follow-up reminder', t:(m)=>msgBody(m, `Quick reminder: seats are filling fast${m.college?' at '+m.college:''}. Most parents still pay the full fee. 🤔`)}
 };
 // Template shown in Settings (placeholders in square brackets)
+const MSG_FOLLOWUP = `Hi [Parent name],\n\nQuick reminder: seats are filling fast at [College]. Most parents still pay the full fee. 🤔\n\nThrough ${BRAND}, you get ${OFFER} off the admission fee at top Bangalore PU colleges with JEE / NEET coaching. There is no catch and no extra charge for you.\n\nWant to see which colleges suit [Student Name]'s marks and goals?\n\nReply SHOW ME 👇`;
 const MSG_TEMPLATE = `Hi [Parent name],\n\nMost parents pay the full fee without knowing there is a way around it. 🤔\n\nThrough ${BRAND}, you get ${OFFER} off the admission fee at top Bangalore PU colleges with JEE / NEET coaching. There is no catch and no extra charge for you.\n\nWant to see which colleges suit [Student Name]'s marks and goals?\n\nReply SHOW ME 👇`;
 const MREPLY = [['STOP','Not interested'],['Later, after exams','Will check later'],['Send details','Send more details'],['SHOW ME','Interested']];
 const msgs = [];
@@ -1585,7 +1588,10 @@ function renderSettings(v){
       <tr><td><b>Status</b></td><td><span class="pill" style="color:#16a34a;background:#dcfce7">Open</span> <span class="pill" style="color:#d97706;background:#fef3c7">Almost full</span> (80%+) <span class="pill" style="color:#dc2626;background:#fee2e2">Full</span></td></tr>
       </tbody></table><div class="note">You only see data for your own college. Call details and student contact numbers are not shared.</div></div>` : `
     ${isAdmin?`<div class="card"><h3>✉ Message format <small>· WhatsApp / SMS to parents</small></h3>
+      <div class="sect" style="margin-top:0">Step 1 · First message <span class="muted" style="font-weight:400">– sent after every call (answered or missed)</span></div>
       <div class="msg rep"><q>${MSG_TEMPLATE}</q></div>
+      <div class="sect">Step 2 · Follow-up <span class="muted" style="font-weight:400">– 2 days later, only if there was no reply or click</span></div>
+      <div class="msg rep"><q>${MSG_FOLLOWUP}</q></div>
       <div class="muted" style="font-size:12px">Filled automatically: [Parent name], [Student Name]; UG/PG students see their course instead of “PU colleges with JEE / NEET coaching”.
       Replies: <b>SHOW ME</b> = High · <b>Send details</b> = Medium · <b>Later</b> = Low · <b>STOP</b> = Not interested.</div></div>`:''}
     <div class="card"><h3>📘 Guide · Bot call flow <small>· ${mmss(SCRIPT_SEC)} message</small></h3><div class="tl">
