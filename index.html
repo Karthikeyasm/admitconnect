@@ -361,6 +361,8 @@ aside{position:sticky}
 <div class="modal" id="seatModal" onclick="if(event.target===this)closeSeat()"><div class="mbox" id="seatBox"></div></div>
 
 <div class="auth" id="auth"></div>
+<!-- Supabase client (login + database). If it cannot load, the page falls back to offline demo accounts. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <div id="toast" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:8px;display:none;z-index:40"></div>
 
@@ -1700,41 +1702,60 @@ function fileChosen(inp){
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeDrawer(); closeSeat(); document.getElementById('upModal').classList.remove('on'); } });
 
-/* ================= Login & registration (demo) =================
-   No server: accounts live in THIS browser's storage only. Passwords are stored as a SHA-256 hash.
-   Real shared logins come with the backend (roadmap step 4). */
+/* ================= Login & registration =================
+   Online: accounts are stored in the AdmitConnect database (Supabase Auth + public.profiles).
+           Supabase keeps passwords as secure one-way hashes; this page never stores them.
+   Offline: if the Supabase library cannot load (no internet / offline copy), the page falls back
+           to the earlier demo accounts saved in this browser only.
+   REQ-DB-01 (login data). New accounts must be approved by an administrator. */
+const SB_URL = 'https://tebxshkktjatbhytulka.supabase.co';
+const SB_KEY = 'sb_publishable_k0EmhjAXPXGA58Aqke57xA_9YzwxbEI';   // publishable key: safe in a browser with RLS on
+// "Keep me logged in": ticked → session kept in localStorage; unticked → only until the tab closes
+const sbStorage = {
+  remember(){ try { return localStorage.getItem('ac_remember') !== '0'; } catch(e){ return true; } },
+  getItem(k){ try { return sessionStorage.getItem(k) ?? localStorage.getItem(k); } catch(e){ return null; } },
+  setItem(k,v){ try { (this.remember() ? localStorage : sessionStorage).setItem(k,v); } catch(e){} },
+  removeItem(k){ try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch(e){} }
+};
+let sb = null;
+try {
+  if (window.supabase && window.supabase.createClient)
+    sb = window.supabase.createClient(SB_URL, SB_KEY, {auth:{storage:sbStorage, persistSession:true, autoRefreshToken:true}});
+} catch(e){ console.warn('[AdmitConnect] Supabase unavailable – using offline demo accounts', e); sb = null; }
+
 const getUsers  = () => store.get('users', []);
 const saveUsers = u  => store.set('users', u);
-async function hashPw(pw){
+async function hashPw(pw){   // offline demo accounts only
   try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ac:'+pw));
         return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join(''); }
-  catch(e){ let h=0; for (const ch of 'ac:'+pw) h=(h*31+ch.charCodeAt(0))|0; return 'x'+h; }   // fallback if Web Crypto is unavailable
+  catch(e){ let h=0; for (const ch of 'ac:'+pw) h=(h*31+ch.charCodeAt(0))|0; return 'x'+h; }
 }
 let authMode = 'login';
 const esc = t => String(t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function renderAuth(mode, msg){
+function renderAuth(mode, msg, isErr){
   authMode = mode || authMode;
-  const roleOpts = ROLES.map(([id,k,ic])=>`<option value="${id}" ${id==='counsellor'?'selected':''}>${ic} ${T(k)}</option>`).join('');
+  // Online, nobody can register as Administrator – an admin approves accounts instead.
+  const roleOpts = ROLES.filter(([id])=>!(sb && id==='admin')).map(([id,k,ic])=>`<option value="${id}" ${id==='counsellor'?'selected':''}>${ic} ${T(k)}</option>`).join('');
   document.getElementById('auth').innerHTML = `<div class="abox">
     <div class="abrand"><h1>Admit<span>Connect</span></h1>
       <div>Admission counselling · bot calls · WhatsApp/SMS follow-ups</div>
       <ul style="padding-left:18px;margin:6px 0"><li>Bot calls every student on your course lists</li><li>Track interest, replies and admissions with proof</li><li>Colleges see their own seat status</li></ul>
-      <div style="margin-top:auto;font-size:12px;color:#94a3b8">Demo · mock data · <span id="verStampA"></span></div></div>
+      <div style="margin-top:auto;font-size:12px;color:#94a3b8">${sb?'Secure login':'Offline demo'} · <span id="verStampA"></span></div></div>
     <div class="aform">
       <div class="atabs"><button class="${authMode==='login'?'on':''}" onclick="renderAuth('login')">Log in</button><button class="${authMode==='register'?'on':''}" onclick="renderAuth('register')">Register</button></div>
-      ${msg?`<div class="note" style="margin:0 0 12px;background:#ecfdf5;color:#065f46">${msg}</div>`:''}
+      ${msg?`<div class="note" style="margin:0 0 12px;${isErr?'background:#fef2f2;color:#991b1b':'background:#ecfdf5;color:#065f46'}">${msg}</div>`:''}
       ${authMode==='login' ? `
       <form onsubmit="event.preventDefault();doLogin()">
-        <div class="afield"><label>Email or phone number</label><input id="lId" autocomplete="username" placeholder="name@example.com or 98XXXXXXXX"></div>
+        <div class="afield"><label>${sb?'Email ID':'Email or phone number'}</label><input id="lId" autocomplete="username" placeholder="${sb?'name@example.com':'name@example.com or 98XXXXXXXX'}"></div>
         <div class="afield"><label>Password</label><input id="lPw" type="password" autocomplete="current-password" placeholder="Your password"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:-2px 0 10px">
           <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="lRem" checked> Keep me logged in</label>
-          <span class="alink" onclick="toast('Password reset needs the backend (Phase 2). For now, register again with a new email.')">Forgot password?</span></div>
+          <span class="alink" onclick="toast('Password reset is coming soon. For now, ask your administrator to reset it.')">Forgot password?</span></div>
         <div class="aerr" id="lErr"></div>
-        <button class="abtn" type="submit">Log in</button>
+        <button class="abtn" type="submit" id="lBtn">Log in</button>
       </form>
       <div style="text-align:center;font-size:13px;margin-top:12px">New here? <span class="alink" onclick="renderAuth('register')">Create an account</span></div>
-      <div style="text-align:center;margin-top:10px"><span class="alink" style="font-size:13px" onclick="demoLogin()">Continue as demo user (Admin) →</span></div>` : `
+      <div style="text-align:center;margin-top:10px"><span class="alink" style="font-size:13px" onclick="demoLogin()">Continue as demo user (Admin, mock data) →</span></div>` : `
       <form onsubmit="event.preventDefault();doRegister()">
         <div class="afield"><label>Full name</label><input id="rName" autocomplete="name" placeholder="e.g. Karthik S"></div>
         <div class="afield"><label>Email ID</label><input id="rEmail" type="email" autocomplete="email" placeholder="name@example.com"></div>
@@ -1745,14 +1766,17 @@ function renderAuth(mode, msg){
           <div class="afield"><label>Password</label><input id="rPw" type="password" autocomplete="new-password" placeholder="Min 8, letters + numbers"></div>
           <div class="afield"><label>Confirm password</label><input id="rPw2" type="password" autocomplete="new-password" placeholder="Repeat password"></div></div>
         <div class="aerr" id="rErr"></div>
-        <button class="abtn" type="submit">Create account</button>
+        <button class="abtn" type="submit" id="rBtn">Create account</button>
       </form>
       <div style="text-align:center;font-size:13px;margin-top:12px">Already registered? <span class="alink" onclick="renderAuth('login')">Log in</span></div>`}
-      <div class="anote">Demo only: accounts are saved in this browser, not on a server. Don't use a real password.</div>
+      <div class="anote">${sb ? 'Accounts are stored securely in the AdmitConnect database. New accounts are activated by an administrator.'
+                              : 'Offline demo: accounts are saved in this browser only. Don\'t use a real password.'}</div>
     </div></div>`;
   const vs = document.getElementById('verStamp'); if (vs) document.getElementById('verStampA').textContent = vs.textContent;
   document.getElementById('auth').classList.add('on');
 }
+function busy(id, on, label){ const b=document.getElementById(id); if (b){ b.disabled=on; b.textContent=label; } }
+
 async function doRegister(){
   const v = id => document.getElementById(id).value.trim(), err = m => (document.getElementById('rErr').textContent = m, false);
   const name=v('rName'), email=v('rEmail').toLowerCase(), phone=v('rPhone').replace(/\D/g,''), pw=document.getElementById('rPw').value, pw2=document.getElementById('rPw2').value, rl=v('rRole');
@@ -1761,19 +1785,83 @@ async function doRegister(){
   if (!/^[6-9]\d{9}$/.test(phone)) return err('Phone number must be a 10-digit Indian mobile number (starts with 6–9).');
   if (pw.length<8 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)) return err('Password must be at least 8 characters with letters and numbers.');
   if (pw!==pw2) return err('The two passwords do not match.');
+  const college = rl==='college' ? v('rCol') : null;
+
+  if (sb){
+    busy('rBtn', true, 'Creating account…');
+    try {
+      const { data, error } = await sb.auth.signUp({ email, password: pw,
+        options: { data: { full_name: name, phone, role: rl, college }, emailRedirectTo: location.origin + location.pathname } });
+      if (error){
+        console.warn('[AdmitConnect] signUp error', error);
+        const m = (error.message||'').toLowerCase();
+        if (m.includes('already')) return err('An account with this email already exists – please log in.');
+        if (m.includes('database error')) return err('This phone number is already registered, or a detail is invalid. Please check and try again.');
+        if (m.includes('rate')) return err('Too many attempts. Please wait a few minutes and try again.');
+        return err('Could not create the account: ' + error.message);
+      }
+      if (data.session) await sb.auth.signOut();          // wait for admin approval before using the app
+      renderAuth('login', data.session
+        ? `✔ Account created for <b>${esc(name)}</b>. An administrator must approve it before you can log in.`
+        : `✔ Account created for <b>${esc(name)}</b>. Please confirm your email using the link we sent, then wait for an administrator to approve it.`);
+      document.getElementById('lId').value = email;
+    } catch(e){ console.error(e); err('Network problem – please check your internet and try again.'); }
+    finally { busy('rBtn', false, 'Create account'); }
+    return;
+  }
+  // ---- offline demo fallback ----
   const users = getUsers();
   if (users.some(u=>u.email===email)) return err('An account with this email already exists – please log in.');
   if (users.some(u=>u.phone===phone)) return err('An account with this phone number already exists – please log in.');
-  const u = {id:'U'+String(users.length+1).padStart(3,'0'), name, email, phone, role:rl, college: rl==='college'?v('rCol'):null, pw: await hashPw(pw), created: new Date().toISOString()};
+  const u = {id:'U'+String(users.length+1).padStart(3,'0'), name, email, phone, role:rl, college, pw: await hashPw(pw), created: new Date().toISOString()};
   users.push(u); saveUsers(users);
   renderAuth('login', `✔ Account created for <b>${esc(name)}</b>. Please log in.`);
   document.getElementById('lId').value = email;
 }
+
+// Load the logged-in user's profile row and open the app (or explain why not)
+async function enterWithSupabaseUser(user){
+  const { data: p, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  if (error || !p){
+    console.warn('[AdmitConnect] profile load failed', error);
+    await sb.auth.signOut();
+    renderAuth('login', 'Your profile could not be loaded. Please contact your administrator.', true);
+    return;
+  }
+  if (!p.approved){
+    await sb.auth.signOut();
+    renderAuth('login', `Hi ${esc(p.full_name.split(' ')[0])}, your account is waiting for approval by an administrator.`, true);
+    return;
+  }
+  startSession({ id: p.employee_id || ('U-'+p.id.slice(0,6)), name: p.full_name, email: p.email, phone: p.phone || '',
+                 role: p.role, college: p.college });
+}
+
 async function doLogin(){
-  const idv = document.getElementById('lId').value.trim().toLowerCase().replace(/^\+91/,''), pw = document.getElementById('lPw').value;
+  const raw = document.getElementById('lId').value.trim(), pw = document.getElementById('lPw').value;
+  const rem = document.getElementById('lRem').checked, errEl = document.getElementById('lErr');
+  if (sb){
+    const email = raw.toLowerCase();
+    if (!email.includes('@')){ errEl.textContent = 'Please log in with your email ID.'; return; }
+    try { localStorage.setItem('ac_remember', rem ? '1' : '0'); } catch(e){}
+    busy('lBtn', true, 'Logging in…');
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+      if (error){
+        console.warn('[AdmitConnect] login error', error);
+        errEl.textContent = /confirm/i.test(error.message) ? 'Please confirm your email first (check your inbox).'
+                                                          : 'Email or password is incorrect.';
+        return;
+      }
+      await enterWithSupabaseUser(data.user);
+    } catch(e){ console.error(e); errEl.textContent = 'Network problem – please check your internet and try again.'; }
+    finally { busy('lBtn', false, 'Log in'); }
+    return;
+  }
+  // ---- offline demo fallback ----
+  const idv = raw.toLowerCase().replace(/^\+91/,'');
   const u = getUsers().find(x=>x.email===idv || x.phone===idv.replace(/\D/g,''));
-  if (!u || u.pw !== await hashPw(pw)){ document.getElementById('lErr').textContent = 'Email/phone or password is incorrect.'; return; }
-  const rem = document.getElementById('lRem').checked;
+  if (!u || u.pw !== await hashPw(pw)){ errEl.textContent = 'Email/phone or password is incorrect.'; return; }
   store.set('session', rem ? {uid:u.id} : null);
   try { sessionStorage.setItem('ac_session', JSON.stringify({uid:u.id})); } catch(e){}
   startSession(u);
@@ -1787,12 +1875,20 @@ function startSession(u){
   setRole(u.role || 'counsellor', true);
   toast('Welcome, '+u.name.split(' ')[0]+'!');
 }
-function logout(){
+async function logout(){
   store.set('session', null); try { sessionStorage.removeItem('ac_session'); } catch(e){}
   if (simTimer){ clearInterval(simTimer); simTimer=null; }
+  if (sb){ try { await sb.auth.signOut(); } catch(e){ console.warn(e); } }
   renderAuth('login', 'You have been logged out.');
 }
-function checkSession(){
+async function checkSession(){
+  if (sb){
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.user){ await enterWithSupabaseUser(data.session.user); return; }
+    } catch(e){ console.warn('[AdmitConnect] session check failed', e); }
+    renderAuth('login'); return;
+  }
   let sess = store.get('session', null);
   if (!sess){ try { sess = JSON.parse(sessionStorage.getItem('ac_session')||'null'); } catch(e){} }
   const u = sess && getUsers().find(x=>x.id===sess.uid);
