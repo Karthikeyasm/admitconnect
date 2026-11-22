@@ -103,6 +103,14 @@ main{padding:18px 24px;min-width:0;grid-column:2}
 .logout{margin-top:8px;border:1px solid #334155;background:none;color:#cbd5e1;border-radius:7px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
 .logout:hover{background:var(--side2);color:#fff}
 @media(max-width:760px){.abox{grid-template-columns:1fr}.abrand{display:none}}
+/* ---------- Admin bell (account approvals) ---------- */
+.bellw{position:relative}
+.bell{position:relative;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:6px 10px;font-size:16px;cursor:pointer;line-height:1}
+.bell b{position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;font-weight:700}
+.bellp{position:absolute;right:0;top:40px;width:380px;max-width:90vw;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 40px #0f172a33;z-index:45;padding:12px;display:none}
+.bellp.on{display:block}
+.req{border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px}
+.req select{padding:5px 8px;border:1px solid var(--line);border-radius:7px;font:inherit;font-size:12px}
 /* Compact scoreboard */
 .sb{display:inline-flex;align-items:stretch;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;flex-wrap:nowrap;flex-shrink:0}
 .sb .hd{background:#111827;color:#fff;font-size:11px;font-weight:600;padding:6px 10px;display:flex;flex-direction:column;justify-content:center;line-height:1.25}
@@ -295,7 +303,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 16:30 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 16:45 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -310,6 +318,7 @@ aside{position:sticky}
       <select class="lsel" id="langSel" onchange="setLang(this.value)" title="Interface language">
         <option value="en">🌐 EN</option><option value="ta">🌐 தமிழ்</option><option value="hi">🌐 हिन्दी</option></select>
       <select class="lsel" id="colSel" onchange="setCollege(this.value)" title="Demo: which college is logged in" style="display:none;max-width:260px"></select>
+      <span class="bellw" id="bellW" style="display:none"><button class="bell" id="bellBtn" onclick="toggleBell(event)" title="Account requests waiting for approval">🔔<span id="bellCount"></span></button><div class="bellp" id="bellP" onclick="event.stopPropagation()"></div></span>
       <select class="lsel" id="roleSel" onchange="setRole(this.value)" title="Demo: view the app as this role"></select>
       <span class="pill" id="modeBadge" style="display:none;background:#fef3c7;color:#92400e;padding:6px 10px" title="Set by the admin in Settings › Calling mode"></span>
       <button class="btn pri" id="campBtn" onclick="startCampaign()" title="Start / pause today's bot-call campaign"></button>
@@ -857,6 +866,7 @@ function renderSide(){
 function renderTop(){
   const rs = document.getElementById('roleSel');
   rs.innerHTML = roleOptions(true);
+  document.getElementById('bellW').style.display = role==='admin' ? '' : 'none';
   const mb = document.getElementById('modeBadge');
   mb.style.display = role==='counsellor' && !isAdminView() ? '' : 'none';
   mb.innerHTML = role==='counsellor' ? MODE_LBL[modeOf(actingC)]+' calling' : '';
@@ -908,6 +918,7 @@ function renderView(){
   const v = document.getElementById('view');
   ({today:renderToday, log:renderCallTable, adm:renderAdmissions, cand:renderCandidates, msg:renderMessages,
     analytics:renderAnalytics, seats:renderSeats, settings:renderSettings, college:renderCollege})[curView](v);
+  if (curView==='settings' && isAdmin) loadAccounts();
   fitTables();
 }
 // Make the main table fill the window down to the bottom (no empty gap, header stays sticky)
@@ -1673,6 +1684,7 @@ function renderSettings(v){
       <div><label>Parallel calls</label><select><option>1 (one by one)</option><option>5</option><option>10</option></select></div>
     </div><div style="margin-top:14px"><button class="btn pri" onclick="toast('Settings saved (demo only)')">Save settings</button></div></div>
 
+    <div class="card mini"><h3>👥 Accounts <small>· from the database – approve and set roles</small></h3><div id="acctList" class="muted">Loading…</div></div>
     <div class="card mini"><h3>👥 Users & roles <small>· mock</small></h3>
       <table><thead><tr><th>User</th><th>Role</th><th>Access</th></tr></thead><tbody>
         <tr><td>${profile.name||'Admin User'}</td><td><span class="role" style="background:#ede9fe;color:#5b21b6">Administrator</span></td><td>Everything + Admin section (analytics, seats & fees, settings)</td></tr>
@@ -1935,6 +1947,56 @@ async function doRegister(){
   document.getElementById('lId').value = email;
 }
 
+/* ---------- Account approvals for admins (bell + Settings › Accounts) ----------
+   Reads/updates public.profiles; the database's RLS rules decide what an admin may do. */
+let sbMe = null, pending = [], pendTimer = null;
+const isDbAdmin = () => !!(sb && sbMe && sbMe.role==='admin' && sbMe.approved);
+async function loadPending(){
+  if (!isDbAdmin()){ pending = []; return paintBell(); }
+  const { data, error } = await sb.from('profiles').select('id,full_name,email,phone,role,college,approved,created_at').eq('approved', false).order('created_at');
+  if (error){ console.warn('[AdmitConnect] pending load', error); pending = []; paintBell(error.message); return; }
+  pending = data || []; paintBell();
+}
+function paintBell(errMsg){
+  const c = document.getElementById('bellCount'); if (!c) return;
+  c.innerHTML = pending.length ? `<b>${pending.length}</b>` : '';
+  const P = document.getElementById('bellP');
+  const roleSel = (id,cur) => `<select id="rq_${id}">${[['counsellor','🎧 Counsellor'],['college','🏫 College partner'],['admin','🛡 Admin']].map(([v,l])=>`<option value="${v}" ${v===cur?'selected':''}>${l}</option>`).join('')}</select>`;
+  P.innerHTML = `<div style="display:flex;align-items:center"><b>🔔 Account requests</b><span class="sp"></span><span class="alink" style="font-size:12px" onclick="loadPending()">↻ Refresh</span></div>` +
+    (!sb ? '<div class="muted" style="margin-top:8px;font-size:13px">Offline copy – approvals need the online site.</div>'
+    : !isDbAdmin() ? '<div class="muted" style="margin-top:8px;font-size:13px">Log in with a real <b>admin</b> account to see requests. (The demo user is not stored in the database.)</div>'
+    : errMsg ? `<div class="aerr" style="margin-top:8px">Could not load requests: ${esc(errMsg)}</div>`
+    : !pending.length ? '<div class="muted" style="margin-top:8px;font-size:13px">No accounts waiting for approval. ✔</div>'
+    : pending.map(u=>`<div class="req"><b>${esc(u.full_name)}</b> <span class="muted" style="font-size:12px">· ${new Date(u.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</span>
+        <div class="muted" style="font-size:12px">${esc(u.email)} · ${esc(u.phone||'')}${u.college?' · '+esc(u.college):''}</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:8px">Role ${roleSel(u.id,u.role)}<span class="sp"></span>
+          <button class="btn pri" style="padding:5px 12px;font-size:12px" onclick="approveUser('${u.id}')">✔ Approve</button></div></div>`).join(''));
+}
+function toggleBell(e){ e.stopPropagation(); const P=document.getElementById('bellP'); P.classList.toggle('on'); if (P.classList.contains('on')) loadPending(); }
+document.addEventListener('click', ()=>{ const P=document.getElementById('bellP'); if (P) P.classList.remove('on'); });
+async function approveUser(id, roleOverride){
+  const sel = document.getElementById('rq_'+id) || document.getElementById('ac_'+id);
+  const r = roleOverride || (sel ? sel.value : 'counsellor');
+  const { error } = await sb.from('profiles').update({ approved:true, role:r }).eq('id', id);
+  if (error){ toast('Approval failed: '+error.message); console.warn(error); return; }
+  toast('✔ Approved as '+r); await loadPending(); if (curView==='settings') loadAccounts();
+}
+async function setAccount(id, field, val){
+  const { error } = await sb.from('profiles').update({ [field]: val }).eq('id', id);
+  if (error){ toast('Update failed: '+error.message); console.warn(error); }
+  else toast('Saved'); loadPending(); loadAccounts();
+}
+async function loadAccounts(){
+  const el = document.getElementById('acctList'); if (!el) return;
+  if (!isDbAdmin()){ el.innerHTML = '<div class="muted" style="font-size:13px">Log in with a real admin account (not the demo user) to manage database accounts.</div>'; return; }
+  const { data, error } = await sb.from('profiles').select('id,full_name,email,phone,role,college,approved,created_at').order('created_at');
+  if (error){ el.innerHTML = `<div class="aerr">Could not load accounts: ${esc(error.message)}</div>`; return; }
+  el.innerHTML = `<table><thead><tr><th>Name</th><th>Email · Phone</th><th>Role</th><th>Approved</th></tr></thead><tbody>${(data||[]).map(u=>`<tr style="cursor:default">
+    <td><b>${esc(u.full_name)}</b>${u.id===sbMe.id?' <span class="muted">(you)</span>':''}</td><td style="font-size:12px">${esc(u.email)}<br>${esc(u.phone||'')}</td>
+    <td><select id="ac_${u.id}" ${u.id===sbMe.id?'disabled':''} onchange="setAccount('${u.id}','role',this.value)">${[['counsellor','🎧 Counsellor'],['college','🏫 College'],['admin','🛡 Admin']].map(([v,l])=>`<option value="${v}" ${v===u.role?'selected':''}>${l}</option>`).join('')}</select></td>
+    <td>${u.id===sbMe.id?'✔':`<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" ${u.approved?'checked':''} onchange="setAccount('${u.id}','approved',this.checked)"> ${u.approved?'Yes':'<b style="color:#dc2626">Waiting</b>'}</label>`}</td></tr>`).join('')}</tbody></table>`;
+}
+
 // Load the logged-in user's profile row and open the app (or explain why not)
 async function enterWithSupabaseUser(user){
   const { data: p, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
@@ -1949,8 +2011,10 @@ async function enterWithSupabaseUser(user){
     renderAuth('login', `Hi ${esc(p.full_name.split(' ')[0])}, your account is waiting for approval by an administrator.`, true);
     return;
   }
+  sbMe = p;
   startSession({ id: p.employee_id || ('U-'+p.id.slice(0,6)), name: p.full_name, email: p.email, phone: p.phone || '',
                  role: p.role, college: p.college });
+  if (p.role==='admin'){ loadPending(); clearInterval(pendTimer); pendTimer = setInterval(loadPending, 60000); }
 }
 
 async function doLogin(){
@@ -1993,6 +2057,7 @@ function startSession(u){
   toast('Welcome, '+u.name.split(' ')[0]+'!');
 }
 async function logout(){
+  sbMe = null; clearInterval(pendTimer); pending = [];
   store.set('session', null); try { sessionStorage.removeItem('ac_session'); } catch(e){}
   if (simTimer){ clearInterval(simTimer); simTimer=null; }
   if (sb){ try { await sb.auth.signOut(); } catch(e){ console.warn(e); } }
