@@ -188,6 +188,8 @@ textarea,.db select{width:100%;padding:9px;border:1px solid var(--line);border-r
 .dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:16px}
 .dcard{cursor:pointer}
 .dcard.sel{outline:2px solid var(--brand)}
+.dbrow{display:flex;align-items:center;gap:8px;justify-content:space-between;border-top:1px dashed var(--line);margin-top:10px;padding-top:8px}
+.dbrow .btn{padding:5px 10px;font-size:12px;white-space:nowrap;flex-shrink:0}
 .dcard .row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
 .prog{height:8px;background:#eef0f5;border-radius:5px;overflow:hidden;margin:8px 0 4px}
 .prog i{display:block;height:100%}
@@ -284,7 +286,6 @@ aside{position:sticky}
         <option value="en">🌐 EN</option><option value="ta">🌐 தமிழ்</option><option value="hi">🌐 हिन्दी</option></select>
       <select class="lsel" id="colSel" onchange="setCollege(this.value)" title="Demo: which college is logged in" style="display:none;max-width:260px"></select>
       <select class="lsel" id="roleSel" onchange="setRole(this.value)" title="Demo: view the app as this role"></select>
-      <button class="btn" id="upBtn" onclick="openUpload()" title="Upload candidate Excel"></button>
       <button class="btn pri" id="campBtn" onclick="startCampaign()" title="Start / pause today's bot-call campaign"></button>
     </div>
     <div class="tabbar" id="tabbar">
@@ -308,8 +309,10 @@ aside{position:sticky}
   <div class="mbox">
     <div style="display:flex;align-items:center"><h2 style="margin:0;font-size:18px">Upload candidate list</h2>
       <button class="x" onclick="document.getElementById('upModal').classList.remove('on')">×</button></div>
+    <div class="set" style="margin-top:12px"><div style="grid-column:1/-1"><label>Course this list is for</label><select id="upCourse" onchange="upInfo()"></select></div></div>
+    <div id="upInfo" class="muted" style="font-size:12px;margin-top:6px"></div>
     <label class="drop" for="file"><div style="font-size:30px">📄</div><div><b>Click to choose</b> an .xlsx / .csv file</div>
-      <div style="font-size:12px;margin-top:4px">One row per candidate · loaded into today's call queue</div></label>
+      <div style="font-size:12px;margin-top:4px">One row per candidate · replaces this course's list and feeds its next call campaign</div></label>
     <input type="file" id="file" accept=".xlsx,.xls,.csv" hidden onchange="fileChosen(this)">
     <div id="fileMsg"></div>
     <div class="sect">Expected columns</div>
@@ -317,6 +320,7 @@ aside{position:sticky}
       <thead><tr><th>Column</th><th>Example</th><th>Required</th></tr></thead>
       <tbody>
         <tr><td>candidate_name</td><td>Ananya R</td><td>Yes</td></tr>
+        <tr><td>parent_name</td><td>Lakshmi R (used in the WhatsApp/SMS greeting)</td><td>Yes</td></tr>
         <tr><td>phone</td><td>+91 98XXXXXX12</td><td>Yes</td></tr>
         <tr><td>level</td><td>PU / UG / PG</td><td>Yes</td></tr>
         <tr><td>course</td><td>PU Biology, NEET Integrated, Engineering, NEET Coaching, MBA…</td><td>Yes</td></tr>
@@ -372,7 +376,7 @@ const DOMAINS = [
   {id:'pg_mtech',lv:'pg',key:'2', ic:'🛠', w:.03, name:'M.E / M.Tech', short:'M.Tech'},
   {id:'pg_msc', lv:'pg', key:'3', ic:'🔬', w:.03, name:'M.Sc', short:'M.Sc'},
   {id:'pg_mcom',lv:'pg', key:'4', ic:'📊', w:.02, name:'M.Com', short:'M.Com'},
-  {id:'pg_ma',  lv:'pg', key:'5', ic:'📖', w:.02, name:'M.A', short:'M.A'},
+  {id:'pg_ma',  lv:'pg', key:'5', ic:'📖', w:0, name:'M.A', short:'M.A'},
   {id:'pg_md',  lv:'pg', key:'6', ic:'🩻', w:.06, name:'MD / MS (NEET-PG)', short:'MD / MS'}
 ];
 const COURSES = DOMAINS.slice(1);
@@ -686,6 +690,22 @@ candidates.forEach(cd=>{ const l = cd.calls[cd.calls.length-1];
 for (let i=0;i<30;i++) todayQ.push({cand:makeCand(280+i,'Excel batch – today'), attempt:1, kind:'New', call:null, state:'queued'});
 
 /* ---------------- College seat master (mock) ---------------- */
+/* ---------- Candidate list (database) per course ---------- */
+const COURSE_DB = {};
+COURSES.forEach(d=>{
+  const cs = candidates.filter(c=>c.domain===d.id);
+  const today = todayQ.some(q=>q.cand.domain===d.id && q.cand.src==='Excel batch – today');
+  const firsts = cs.map(c=>c.calls[0]?c.calls[0].date:TODAY).sort((a,b)=>b-a);
+  COURSE_DB[d.id] = { recs: cs.length, updated: cs.length ? (today ? TODAY : firsts[0]) : null, file: cs.length ? `${d.short.replace(/[^A-Za-z0-9]+/g,'_')}_list.xlsx` : null };
+});
+function dbStatus(id){
+  const db = COURSE_DB[id];
+  if (!db.updated) return {l:'Empty', c:'#64748b', bg:'#f1f5f9', note:'No list uploaded'};
+  const a = daysAgo(db.updated);
+  return a<=2 ? {l:'Recent', c:'#16a34a', bg:'#dcfce7'} : a<=7 ? {l:'This week', c:'#d97706', bg:'#fef3c7'} : {l:'Old – re-upload', c:'#dc2626', bg:'#fee2e2'};
+}
+const dbPill = id => { const s=dbStatus(id); return `<span class="pill" style="color:${s.c};background:${s.bg}">${s.l}</span>`; };
+const dbWhen = id => { const db=COURSE_DB[id]; if(!db.updated) return '—'; const a=daysAgo(db.updated); return fmtD(db.updated)+(a===0?' (today)':a===1?' (yesterday)':` (${a} days ago)`); };
 const COLLEGE_LIST = [];
 Object.entries(COLLEGES).forEach(([d,names])=>{
   const cfg = COLLEGE_CFG[d];
@@ -786,9 +806,8 @@ function renderTop(){
   cs.style.display = role==='college' ? '' : 'none';
   if (role==='college') cs.innerHTML = collegeOptions(myCollege);
   const isCol = role==='college';
-  document.getElementById('upBtn').style.display = isCol ? 'none' : '';
-  document.getElementById('campBtn').style.display = isCol ? 'none' : '';
-  document.getElementById('upBtn').textContent = T('upload');
+  // Start only where calls happen (main tabs); hidden on Admin pages, Settings and the college view
+  document.getElementById('campBtn').style.display = (isCol || isAdminView()) ? 'none' : '';
   document.getElementById('langSel').value = lang;
   updateCampBtn();
 }
@@ -1129,9 +1148,9 @@ function renderCandidates(v){
   let C = candidates.filter(c=>matchDom(c.domain) && passCF('cand',c) && (!qq || (c.name+c.phone+c.id+c.city).toLowerCase().includes(qq)));
   v.innerHTML = `
   <div class="crow">
-    <span class="pbar">📄 Source: Excel uploads (placeholder) · ${candidates.length} candidates · ${todayQ.filter(q=>q.cand.src==='Excel batch – today').length} uploaded today</span>
+    <span class="pbar">📄 Source: course lists (uploaded in Seats &amp; colleges) · ${candidates.length} candidates · ${todayQ.filter(q=>q.cand.src==='Excel batch – today').length} uploaded today</span>
     <span class="pbar">Showing <b style="color:var(--ink)">${C.length}</b></span>${appliedTags('cand')}
-    <button class="btn pri" style="margin-left:auto" onclick="openUpload()">${T('upload')}</button></div>
+    </div>
   <div class="tw fit"><table>
     <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Course (Excel)</th><th>Language</th><th>City</th><th>Score %</th><th>Calls</th><th>Last call</th><th>Interest</th><th>Admission</th></tr></thead>
     <tbody>${C.map(c=>{ const last=c.calls[c.calls.length-1], b=best(c), ac=admCall(c);
@@ -1410,6 +1429,11 @@ function renderSeats(v){
     ${kpi('Remaining for us', sum(sel,'rem').toLocaleString('en-IN'), 'seats still open')}
     ${kpi('Value of seats filled', lakh(sel.reduce((s,r)=>s+r.filled*r.fee,0)), 'yearly fee × seats filled')}
   </div>
+  <div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+    <b>📥 Candidate lists (one per course)</b>
+    ${['Recent','This week','Old – re-upload','Empty'].map(k=>{ const n=ds.filter(d=>dbStatus(d.id).l===k).length; const st=dbStatus(ds.find(d=>dbStatus(d.id).l===k)?.id||ds[0].id); return n?`<span class="pill" style="color:${k==='Recent'?'#16a34a':k==='This week'?'#d97706':k==='Empty'?'#64748b':'#dc2626'};background:${k==='Recent'?'#dcfce7':k==='This week'?'#fef3c7':k==='Empty'?'#f1f5f9':'#fee2e2'}">${k}: ${n}</span>`:''; }).join('')}
+    <span class="muted" style="font-size:12px">Each course has its own students, phone numbers and audience. Upload per course below.</span>
+    <button class="btn pri" style="margin-left:auto" onclick="openUpload('${curDom.startsWith('L:')||curDom==='all'?'':curDom}')">⬆ Upload list</button></div>
   ${LEVELS.filter(l=>ds.some(d=>d.lv===l.id)).map(l=>`<div class="sect" style="margin-top:4px">${l.ic} ${l.name}</div><div class="dgrid">${ds.filter(d=>d.lv===l.id).map(d=>{
     const R = rows.filter(r=>r.domain===d.id), q=sum(R,'quota'), f=sum(R,'filled'), p=pct(f,q);
     return `<div class="card dcard ${curDom===d.id?'sel':''}" onclick="setDom('${curDom===d.id?'all':d.id}')">
@@ -1420,7 +1444,10 @@ function renderSeats(v){
       <div class="row"><span class="muted">Our quota · Filled · Left</span><b>${q} · ${f} · ${q-f}</b></div>
       <div class="row"><span class="muted">Fee per seat / yr</span><b>${lakh(Math.min(...R.map(r=>r.fee)))} – ${lakh(Math.max(...R.map(r=>r.fee)))}</b></div>
       <div class="prog"><i style="width:${p}%;background:${p>=100?'#dc2626':p>=80?'#d97706':'#4f46e5'}"></i></div>
-      <div class="muted" style="font-size:12px">${p}% of our seats filled</div></div>`;}).join('')}</div>`).join('')}
+      <div class="muted" style="font-size:12px">${p}% of our seats filled</div>
+      <div class="dbrow"><div><div style="font-size:12px"><b>📋 Candidate list</b> ${dbPill(d.id)}</div>
+        <div class="muted" style="font-size:12px;margin-top:3px">${COURSE_DB[d.id].updated?`${COURSE_DB[d.id].recs} records · updated ${dbWhen(d.id)}`:'Empty – upload a list to start calling'}</div></div>
+        <button class="btn" onclick="event.stopPropagation();openUpload('${d.id}')">⬆ Upload</button></div></div>`;}).join('')}</div>`).join('')}
   <div class="card" style="margin-bottom:16px"><h3>Our seat quota by course <small>· filled vs remaining</small></h3><div class="ch"><canvas id="c7"></canvas></div></div>
   <div class="filters"><select onchange="setDom(this.value)"><option value="all">All courses</option>${LEVELS.map(l=>`<optgroup label="${l.name}"><option value="L:${l.id}" ${curDom==='L:'+l.id?'selected':''}>All ${l.name.split(' (')[0]}</option>${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${curDom===d.id?'selected':''}>${d.name}</option>`).join('')}</optgroup>`).join('')}</select>
     <select id="sst" onchange="fillSeatRows()"><option value="any">All statuses</option><option>Full</option><option>Almost full</option><option>Open</option></select>
@@ -1624,10 +1651,22 @@ function renderSettings(v){
 }
 
 /* ================= Upload placeholder ================= */
-function openUpload(){ document.getElementById('fileMsg').innerHTML=''; document.getElementById('upModal').classList.add('on'); }
+// Upload a candidate list for ONE course (admin, Seats & colleges page)
+function openUpload(course){
+  const sel = document.getElementById('upCourse');
+  sel.innerHTML = '<option value="">— choose a course —</option>' + LEVELS.map(l=>`<optgroup label="${l.name}">${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${d.id===course?'selected':''}>${d.name}</option>`).join('')}</optgroup>`).join('');
+  document.getElementById('fileMsg').innerHTML=''; document.getElementById('file').value='';
+  upInfo(); document.getElementById('upModal').classList.add('on');
+}
+function upInfo(){ const id=document.getElementById('upCourse').value, el=document.getElementById('upInfo');
+  el.innerHTML = id ? `Current list: ${COURSE_DB[id].updated?`<b>${COURSE_DB[id].file}</b> · ${COURSE_DB[id].recs} records · updated ${dbWhen(id)}`:'<b>Empty</b> – no list uploaded yet'} ${dbPill(id)}` : 'Pick the course first – each course keeps its own list.'; }
 function fileChosen(inp){
   const f = inp.files[0]; if(!f) return;
-  document.getElementById('fileMsg').innerHTML = `<div class="note" style="background:#ecfdf5;color:#065f46">✔ Selected <b>${f.name}</b> (${(f.size/1024).toFixed(1)} KB). Import is a placeholder – the file is not processed yet.</div>`;
+  const id = document.getElementById('upCourse').value;
+  if (!id){ document.getElementById('fileMsg').innerHTML = '<div class="note" style="background:#fef2f2;color:#991b1b">Choose the course this list belongs to, then pick the file again.</div>'; inp.value=''; return; }
+  COURSE_DB[id] = { recs: COURSE_DB[id].recs, updated: TODAY, file: f.name };
+  document.getElementById('fileMsg').innerHTML = `<div class="note" style="background:#ecfdf5;color:#065f46">✔ <b>${f.name}</b> (${(f.size/1024).toFixed(1)} KB) set as the list for <b>${domName(id)}</b> – marked updated today. Reading the rows is a placeholder (Phase 2).</div>`;
+  upInfo(); if (curView==='seats') renderView();
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeDrawer(); closeSeat(); document.getElementById('upModal').classList.remove('on'); } });
 
