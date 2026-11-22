@@ -303,7 +303,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 16:45 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 16:55 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -865,6 +865,9 @@ function renderSide(){
 }
 function renderTop(){
   const rs = document.getElementById('roleSel');
+  // Role switcher = preview tool: only real database admins, the demo user or the offline copy may use it
+  const canPreview = !sbMe || sbMe.role==='admin';
+  rs.style.display = canPreview ? '' : 'none';
   rs.innerHTML = roleOptions(true);
   document.getElementById('bellW').style.display = role==='admin' ? '' : 'none';
   const mb = document.getElementById('modeBadge');
@@ -1649,12 +1652,13 @@ function renderSettings(v){
 `:''}
     <div class="card"><h3>👤 My profile <small>· shown in the left panel</small></h3><div class="set">
       ${inp('name','Full name','e.g. Karthik S')}
-      <div><label>${T('role')} (demo switch)</label><select onchange="setRole(this.value)">${roleOptions(false)}</select></div>
+      ${(!sbMe || sbMe.role==='admin') ? `<div><label>${T('role')} (preview only – does not change any account)</label><select onchange="setRole(this.value)">${roleOptions(false)}</select></div>`
+      : `<div><label>${T('role')}</label><input value="${T(ROLES.find(r=>r[0]===role)[1])} (set by your admin)" disabled></div>`}
       ${inp('email','Email','name@example.com')}
       ${inp('phone','Phone','+91 XXXXX XXXXX')}
       ${role==='college' ? `<div><label>College</label><select onchange="setCollege(this.value)">${collegeOptions(myCollege)}</select></div>` : inp('id','Employee ID','ADM-001')}
       ${role==='admin' ? inp('branch','Branch / Office','Chennai') : ''}
-    </div><div class="muted" style="font-size:12px;margin-top:8px">Saved in this browser only (demo).</div></div>
+    </div><div class="muted" style="font-size:12px;margin-top:8px">Changes here are saved automatically in <b>this browser only</b>. They do not change your login account. To give someone Admin access, approve their account as Admin with the 🔔 bell.</div></div>
 
     ${role==='counsellor'?`<div class="card"><h3>📞 Your calling mode</h3><div style="font-size:15px"><b>${MODE_LBL[modeOf(actingC)]}</b> <span class="muted">– set by your admin</span></div>
       <div class="muted" style="font-size:13px;margin-top:6px">${modeOf(actingC)==='auto'?'Press ▶ Start on Today\'s campaign; the bot calls and records everything.':'In Today\'s campaign, press 📞 Log call next to each student after you call them, and fill in the result.'}</div></div>`:''}
