@@ -312,7 +312,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 18:10 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 18:20 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -2060,7 +2060,10 @@ async function setupStep1(resend){
     if (error){ const m = await fnErr(error); if (/already exists/i.test(m)){ setupNeeded=false; return renderAuth('login', m, true); }
                 if (resend) return renderAuth('code', m, true); errEl.textContent = m; return; }
     const { error: e2 } = await sb.auth.signInWithOtp({ email: setupEmail, options:{ shouldCreateUser:false, emailRedirectTo: location.origin + location.pathname } });
-    if (e2){ const m = /rate|seconds/i.test(e2.message) ? 'Please wait a minute before asking for another code.' : 'Could not send the code: '+e2.message;
+    if (e2){ const secs = (e2.message.match(/after (\d+) seconds/)||[])[1];
+             const m = secs ? `Please wait ${secs} seconds, then try again.`
+                     : /rate|limit|exceeded/i.test(e2.message) ? '📧 Email limit reached. The free Supabase email allows only a few emails per hour. If an email already came, use the newest one. Otherwise try again after about an hour, or ask the developer to connect a custom email sender (SMTP).'
+                     : 'Could not send the email: '+e2.message;
              if (resend) return renderAuth('code', m, true); errEl.textContent = m; return; }
     renderAuth('code', resend ? '✔ A new email was sent.' : '');
   } catch(e){ (document.getElementById('gErr')||{}).textContent = 'Network problem – please try again.'; }
@@ -2128,7 +2131,7 @@ async function doFirst(){
   busy('fBtn', true, 'Sending…');
   try {
     const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
-    if (error){ err.textContent = /rate/i.test(error.message) ? 'Too many emails sent. Please wait and try again.' : 'Could not send the link: '+error.message; return; }
+    if (error){ err.textContent = /rate|limit|exceeded/i.test(error.message) ? '📧 Email limit reached (only a few emails per hour on the free email sender). Use the newest email you already received, or try again after about an hour.' : 'Could not send the link: '+error.message; return; }
     renderAuth('login', `✔ If <b>${esc(email)}</b> has an account, a set-password link is on its way. Check your inbox (and spam).`);
   } catch(e){ err.textContent='Network problem – please try again.'; }
   finally { busy('fBtn', false, 'Email me a set-password link'); }
@@ -2338,6 +2341,18 @@ applyPin();
 FILL  = {today:()=>renderView(), log:fillRows, adm:fillAdmRows, cand:()=>renderView(), msg:fillMsgRows};
 renderAll();
 checkSession();
+// Always run the newest published version (browsers may keep an old copy for up to 10 minutes)
+(async () => {
+  try {
+    if (location.hash || location.protocol==='file:') return;            // never interrupt a login link
+    const cur = (document.getElementById('verStamp')||{}).textContent || '';
+    const html = await (await fetch(location.pathname + '?nc=' + Date.now(), {cache:'no-store'})).text();
+    const m = html.match(/id="verStamp"[^>]*>([^<]+)</); if (!m || m[1].trim()===cur.trim()) return;
+    const tag = encodeURIComponent(m[1].replace(/\D/g,''));
+    if (new URLSearchParams(location.search).get('v')===tag) return;     // already tried once
+    location.replace(location.pathname + '?v=' + tag);
+  } catch(e){}
+})();
 </script>
 </body>
 </html>
