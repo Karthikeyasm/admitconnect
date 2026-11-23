@@ -176,8 +176,10 @@ tr.grp:hover{background:none}
 /* Drawer */
 .ov{position:fixed;inset:0;background:#0f172a66;display:none;z-index:20}
 .ov.on{display:block}
-.drawer{position:fixed;top:0;right:-580px;width:560px;max-width:100%;height:100vh;background:var(--card);z-index:21;transition:right .25s;overflow:auto;box-shadow:-10px 0 30px #0002}
-.drawer.on{right:0}
+.drawer{position:fixed;top:0;right:0;width:560px;max-width:100%;height:100vh;background:var(--card);z-index:21;transition:transform .25s,width .2s;transform:translateX(105%);overflow:auto;box-shadow:-10px 0 30px #0002}
+.drawer.on{transform:none}
+.drawer.wide{width:1180px;max-width:100vw}
+.drawer .mcwrap{padding:18px 22px}
 .dh{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:10px}
 .dh h2{margin:0;font-size:18px}
 .x{margin-left:auto;cursor:pointer;font-size:22px;color:var(--muted);border:none;background:none}
@@ -278,6 +280,15 @@ textarea,.db select{width:100%;padding:9px;border:1px solid var(--line);border-r
 .who b{color:#fff;display:block;font-size:13px}
 .ptitle{font-size:18px;font-weight:700}
 .sgrid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;align-items:start}
+.filters.compact select{flex:none;width:auto;max-width:280px}
+.crumbs a{color:var(--brand);text-decoration:none;font-weight:600}.crumbs a:hover{text-decoration:underline}
+.setwrap{display:grid;grid-template-columns:210px 1fr;gap:16px;align-items:start}
+.setnav{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px;position:sticky;top:10px}
+.setnav div{padding:9px 10px;border-radius:8px;cursor:pointer;display:flex;gap:8px;align-items:center;font-size:14px}
+.setnav div:hover{background:var(--bg)}
+.setnav div.on{background:#4f46e5;color:#fff}.setnav div.on small{color:#e0e7ff}
+.sgrid.one{grid-template-columns:1fr}
+@media(max-width:800px){.setwrap{grid-template-columns:1fr}.setnav{position:static;display:flex;flex-wrap:wrap}}
 .sgrid>div>.card{margin-bottom:16px}
 .themes{display:flex;gap:10px;flex-wrap:wrap}
 .th{border:2px solid var(--line);border-radius:10px;padding:8px;cursor:pointer;width:96px;text-align:center;font-size:12px;background:var(--card)}
@@ -292,29 +303,21 @@ textarea,.db select{width:100%;padding:9px;border:1px solid var(--line);border-r
 .pinbtn:hover{background:var(--brand);color:#fff}
 aside{position:sticky}
 .app{transition:grid-template-columns .2s}
-.app.collapsed{grid-template-columns:58px 1fr}
-.app.collapsed aside{padding:56px 6px 12px;overflow-x:hidden}
-.app.collapsed .pinbtn{left:15px;right:auto}
-.app.collapsed .logo,.app.collapsed .sub,.app.collapsed .sec,.app.collapsed .dom.sub,.app.collapsed .dom .ct,.app.collapsed .dom .car{display:none}
-.app.collapsed .dom{font-size:0;justify-content:center;padding:9px 0;gap:0}
-.app.collapsed .dom .ic{font-size:17px;width:auto}
-.app.collapsed .dom.lvlh{margin-top:2px}
-.app.collapsed .dom.lvlh b{display:none}
-.app.collapsed .admbox{margin-top:6px}
-.app.collapsed .who{font-size:0;padding:10px 0;text-align:center}
-.app.collapsed .who b{display:none}
-.app.collapsed .who:before{content:'👤';font-size:18px}
-/* Narrow windows: the strip always stays; the full panel opens over the page instead of squeezing it */
-@media(max-width:1000px){.app{grid-template-columns:58px 1fr}
-  .app:not(.collapsed) aside{position:fixed;left:0;top:0;width:260px;z-index:25;box-shadow:8px 0 30px #0006}}
+.app.collapsed{grid-template-columns:16px 1fr}
+.app.collapsed aside{position:fixed;left:0;top:0;width:260px;z-index:25;transform:translateX(-100%);transition:transform .2s;box-shadow:8px 0 30px #0006}
+.app.collapsed.peek aside{transform:none}
+.sidehandle{display:none}
+.app.collapsed .sidehandle{display:flex;align-items:center;justify-content:center;position:fixed;left:0;top:calc(50% - 45px);width:16px;height:90px;background:var(--side);color:#cbd5e1;border-radius:0 9px 9px 0;cursor:pointer;z-index:24;font-size:14px;box-shadow:2px 0 8px #0003}
+.app.collapsed .sidehandle:hover{width:20px}
 </style>
 </head>
 <body>
 <div class="app">
+  <div class="sidehandle" id="sideHandle" title="Show the side panel" onclick="event.stopPropagation();document.querySelector('.app').classList.add('peek')">›</div>
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 22 Nov 2026, 19:05 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 13:30 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -328,7 +331,7 @@ aside{position:sticky}
       <div class="sp"></div>
       <select class="lsel" id="langSel" onchange="setLang(this.value)" title="Interface language">
         <option value="en">🌐 EN</option><option value="ta">🌐 தமிழ்</option><option value="hi">🌐 हिन्दी</option></select>
-      <select class="lsel" id="colSel" onchange="setCollege(this.value)" title="Demo: which college is logged in" style="display:none;max-width:260px"></select>
+      <select class="lsel" id="colSel" onchange="role==='college'?setCollege(this.value):(colFilter=this.value,renderAll())" title="College" style="max-width:160px"></select>
       <span class="bellw" id="bellW" style="display:none"><button class="bell" id="bellBtn" onclick="toggleBell(event)" title="Account requests waiting for approval">🔔<span id="bellCount"></span></button><div class="bellp" id="bellP" onclick="event.stopPropagation()"></div></span>
       <select class="lsel" id="roleSel" onchange="setRole(this.value)" title="Demo: view the app as this role"></select>
       <span class="pill" id="modeBadge" style="display:none;background:#fef3c7;color:#92400e;padding:6px 10px" title="Set by the admin in Settings › Calling mode"></span>
@@ -661,8 +664,8 @@ const MTPL = {
   reminder:{l:'Step 2 · Follow-up reminder', t:(m)=>msgBody(m, `Quick reminder: seats are filling fast${m.college?' at '+m.college:''}. Most parents still pay the full fee. 🤔`)}
 };
 // Template shown in Settings (placeholders in square brackets)
-const MSG_FOLLOWUP = `Hi [Parent name],\n\nQuick reminder: seats are filling fast at [College]. Most parents still pay the full fee. 🤔\n\nThrough ${BRAND}, you get ${OFFER} off the admission fee at top Bangalore PU colleges with JEE / NEET coaching. There is no catch and no extra charge for you.\n\nWant to see which colleges suit [Student Name]'s marks and goals?\n\nReply SHOW ME 👇`;
-const MSG_TEMPLATE = `Hi [Parent name],\n\nMost parents pay the full fee without knowing there is a way around it. 🤔\n\nThrough ${BRAND}, you get ${OFFER} off the admission fee at top Bangalore PU colleges with JEE / NEET coaching. There is no catch and no extra charge for you.\n\nWant to see which colleges suit [Student Name]'s marks and goals?\n\nReply SHOW ME 👇`;
+let MSG_FOLLOWUP = `Hi [Parent name],\n\nQuick reminder: seats are filling fast at [College]. Most parents still pay the full fee. 🤔\n\nThrough ${BRAND}, you get ${OFFER} off the admission fee at top Bangalore PU colleges with JEE / NEET coaching. There is no catch and no extra charge for you.\n\nWant to see which colleges suit [Student Name]'s marks and goals?\n\nReply SHOW ME 👇`;
+let MSG_TEMPLATE = `Hi [Parent name],\n\nMost parents pay the full fee without knowing there is a way around it. 🤔\n\nThrough ${BRAND}, you get ${OFFER} off the admission fee at top Bangalore PU colleges with JEE / NEET coaching. There is no catch and no extra charge for you.\n\nWant to see which colleges suit [Student Name]'s marks and goals?\n\nReply SHOW ME 👇`;
 const MREPLY = [['STOP','Not interested'],['Later, after exams','Will check later'],['Send details','Send more details'],['SHOW ME','Interested']];
 const msgs = [];
 let msgNo = 9001;
@@ -860,10 +863,16 @@ let theme = store.get('theme', 'light');
 document.body.dataset.theme = theme;
 // Side panel pinned (full) or unpinned (icon strip) – remembered in this browser
 let pinned = store.get('pinned', window.innerWidth>=1100);
-function applyPin(){ document.querySelector('.app').classList.toggle('collapsed', !pinned);
-  const b=document.getElementById('pinBtn'); b.textContent = pinned ? '📌' : '»'; b.title = pinned ? 'Unpin – shrink the side panel' : 'Pin – show the full side panel';
+let colFilter = '';   // header College filter (admin)
+function applyPin(){ const app=document.querySelector('.app'), narrow = window.innerWidth<1000;
+  app.classList.toggle('collapsed', !pinned || narrow); if (pinned && !narrow) app.classList.remove('peek');
+  const b=document.getElementById('pinBtn'); b.textContent = pinned && !narrow ? '📌' : '📍'; b.title = pinned && !narrow ? 'Unpin – hide the side panel (a small tab stays on the left edge)' : 'Pin – keep the side panel open';
   if (typeof fitTables==='function') setTimeout(fitTables, 220); }
 function togglePin(){ pinned=!pinned; store.set('pinned',pinned); applyPin(); }
+// Unpinned side panel closes when you click anywhere outside it
+document.addEventListener('click', e=>{ const app=document.querySelector('.app');
+  if (app.classList.contains('peek') && !e.target.closest('aside') && !e.target.closest('#sideHandle')) app.classList.remove('peek'); });
+window.addEventListener('resize', ()=>applyPin());
 function setTheme(t){ theme=t; document.body.dataset.theme=t; store.set('theme',t); renderAll(); }
 function setProf(k,v){ profile[k]=v; store.set('profile',profile); renderSide(); }
 const inDom = c => matchDom(c.domain);
@@ -889,18 +898,20 @@ function renderSide(){
   const navItem = (v,ic,label)=>`<div class="dom ${curView===v?'active':''}" title="${label}" onclick="setView('${v}')"><span class="ic">${ic}</span>${label}</div>`;
   document.getElementById('commonNav').innerHTML = `<div class="admbox">${isCol?navItem('college','🏫',T('college_dash')):''}${navItem('settings','⚙',T('settings'))}</div>`;
   const roleLbl = T(ROLES.find(r=>r[0]===role)[1]);
-  document.getElementById('who').innerHTML = `<div class="who">👤 <b>${role==='counsellor'&&MOCK_COUNSELLORS.some(c=>c.id===actingC)?cName(actingC)+' (preview)':profile.name||'Your name'}</b>${roleLbl}${role==='counsellor'?' · '+MODE_LBL[modeOf(actingC)]:''}${isCol?' · '+myCollege:' · '+profile.id}
+  document.getElementById('who').innerHTML = `<div class="who" style="cursor:pointer" title="Login details – open My profile" onclick="if(!event.target.closest('.logout')){setSec='profile';setView('settings')}">👤 <b>${role==='counsellor'&&MOCK_COUNSELLORS.some(c=>c.id===actingC)?cName(actingC)+' (preview)':profile.name||'Your name'}</b>${roleLbl}${role==='counsellor'?' · '+MODE_LBL[modeOf(actingC)]:''}${isCol?' · '+myCollege:' · '+profile.id}
     ${profile.email?`<div style="font-size:11px;margin-top:2px">${profile.email}</div>`:''}<button class="logout" onclick="logout()" title="Log out">⎋ Log out</button></div>`;
   if (isCol){ document.getElementById('adminNav').innerHTML=''; return; }
   document.getElementById('secDom').textContent = T('domains');
   const act = id => curDom===id && !isAdminView() ? 'active' : '';
+  // Manual-mode counsellors pick the course inside the call form, so the panel shows only the levels
+  const noSub = role==='counsellor' && myMode()==='manual';
   const cnt = f => candidates.filter(f).length;
   document.getElementById('domains').innerHTML =
     `<div class="dom ${act('all')}" title="All courses" onclick="sideDom('all')"><span class="ic">◎</span>All courses<span class="ct">${candidates.length}</span></div>` +
     LEVELS.map(l=>`<div class="dom lvlh ${act('L:'+l.id)}" title="${l.name}" onclick="sideDom('L:${l.id}')">
-        <span class="car" onclick="event.stopPropagation();toggleLvl('${l.id}')">${openLv[l.id]?'▾':'▸'}</span><span class="ic">${l.ic}</span><b>${l.name}</b>
+        ${noSub?'<span class="car"></span>':`<span class="car" onclick="event.stopPropagation();toggleLvl('${l.id}')">${openLv[l.id]?'▾':'▸'}</span>`}<span class="ic">${l.ic}</span><b>${l.name}</b>
         <span class="ct">${cnt(c=>levelOf(c.domain)===l.id)}</span></div>` +
-      (openLv[l.id] ? (()=>{ let seen={}; return COURSES.filter(d=>d.lv===l.id).map(d=>{
+      (openLv[l.id] && !noSub ? (()=>{ let seen={}; return COURSES.filter(d=>d.lv===l.id).map(d=>{
         let h='';
         if (d.grp && !seen[d.grp]){ seen[d.grp]=1; const g=GROUPS[d.grp];
           h = `<div class="dom sub grph ${act('G:'+d.grp)}" title="${g.full}" onclick="sideDom('G:${d.grp}')"><span class="ic">${g.ic}</span><b>${g.name}</b><span class="ct">${cnt(c=>groupOf_(c.domain)===d.grp)}</span></div>`; }
@@ -913,15 +924,20 @@ function renderTop(){
   const rs = document.getElementById('roleSel');
   // Role switcher = preview tool: only the real database admin or the demo user may use it
   const canPreview = !sbMe || sbMe.role==='admin';
-  rs.style.display = canPreview ? '' : 'none';
+  rs.style.display = '';
   rs.innerHTML = roleOptions(true);
+  rs.disabled = !canPreview;
+  rs.title = canPreview ? 'User type – preview the app as another role (admin only)' : 'Your user type (set by the admin)';
   document.getElementById('bellW').style.display = role==='admin' ? '' : 'none';
   const mb = document.getElementById('modeBadge');
   mb.style.display = role==='counsellor' && !isAdminView() ? '' : 'none';
   mb.innerHTML = role==='counsellor' ? MODE_LBL[modeOf(actingC)]+' calling' : '';
   const cs = document.getElementById('colSel');
-  cs.style.display = role==='college' ? '' : 'none';
-  if (role==='college') cs.innerHTML = collegeOptions(myCollege);
+  const realAdmin = !sbMe || sbMe.role==='admin';
+  cs.style.display = '';
+  cs.innerHTML = role==='college' ? collegeOptions(myCollege) : `<option value="">🏫 All colleges</option>${collegeOptions(colFilter)}`;
+  cs.disabled = !realAdmin;
+  cs.title = realAdmin ? (role==='college' ? 'College being previewed' : 'College – filters Data analytics and Seats (admin only)') : 'College (set by the admin)';
   const isCol = role==='college';
   // Start only where calls happen (main tabs); hidden on Admin pages, Settings and the college view
   document.getElementById('campBtn').style.display = (isCol || isAdminView() || !canAuto()) ? 'none' : '';
@@ -1053,7 +1069,7 @@ function renderToday(v){
       const idc = q.state==='queued' ? idChip('Queued','queued') : q.state==='calling' ? idChip('Calling…','calling') : cid(c);
       const st = q.state==='queued' ? '<span class="pill" style="background:#f1f5f9;color:#64748b">⏳ In queue</span>'
                : q.state==='calling' ? '<span class="pill" style="background:#dbeafe;color:#1d4ed8"><span class="live"></span>Calling…</span>' : statusPill(c.status)+(c.manual?' <span class="pill" style="background:#fef3c7;color:#92400e">✍</span>':'');
-      return `<tr ${c?`onclick="openCall('${c.id}')"`:'style="cursor:default"'}>
+      return `<tr onclick="${c?`openCall('${c.id}')`:`openCand('${q.cand.id}',${i})`}">
         <td class="muted">${i+1}</td><td>${idc}</td>
 ${canManual()?`<td>${q.state==='queued'?`<button class="btn pri" style="padding:4px 10px;font-size:12px" onclick="event.stopPropagation();openManual(${i})">📞 Log call</button>`:c&&canEdit(c)?`<button class="btn" style="padding:4px 10px;font-size:12px" onclick="event.stopPropagation();openManual(null,'${c.id}')">✎ Edit</button>`:''}</td>`:''}
         <td><b>${q.cand.name}</b><div class="muted" style="font-size:12px">${q.cand.masked}</div></td>
@@ -1276,7 +1292,7 @@ function renderCandidates(v){
   <div class="tw fit"><table>
     <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Course (Excel)</th><th>Language</th><th>City</th><th>Score %</th><th>Calls</th><th>Last call</th><th>Interest</th><th>Admission</th></tr></thead>
     <tbody>${C.map(c=>{ const last=c.calls[c.calls.length-1], b=best(c), ac=admCall(c);
-      return `<tr ${last?`onclick="openCall('${(ac||last).id}')"`:'style="cursor:default"'}><td class="muted">${c.id}</td><td><b>${c.name}</b></td><td>${c.masked}</td>
+      return `<tr onclick="${last?`openCall('${(ac||last).id}')`:`openCand('${c.id}')`}"><td class="muted">${c.id}</td><td><b>${c.name}</b></td><td>${c.masked}</td>
       <td>${shortDom(c.domain)}</td><td>${c.lang}</td><td>${c.city}</td><td>${c.score}</td><td>${c.calls.length}</td>
       <td>${last?cid(last)+' '+statusPill(last.status):'<span class="pill" style="background:#f1f5f9;color:#64748b">⏳ Queued today</span>'}</td>
       <td>${interestCell(b)}</td><td>${ac?admChip(ac)+' '+admPill(ac.admission):last?admPill(last.admission):'—'}</td></tr>`;}).join('') ||
@@ -1404,7 +1420,7 @@ function openCall(id){
   document.getElementById('drawer').innerHTML = `
   <div class="dh"><div><div class="muted" style="font-size:12px">${cid(c)} · Attempt #${c.attempt}</div><h2 style="margin-top:6px">${c.cand.name}</h2>
     <div class="muted">${c.cand.masked} · ${c.cand.city}</div><div style="margin-top:8px">${statusPill(c.status)} ${admPill(c.admission)} ${c.manual?`<span class="pill" style="background:#fef3c7;color:#92400e">✍ Manual · ${c.by||''}</span>`:'<span class="pill" style="background:#e0e7ff;color:#3730a3">🤖 Bot call</span>'}</div></div>
-    <button class="x" onclick="closeDrawer()">×</button></div>
+    <div style="display:flex;gap:6px;align-items:flex-start">${canEdit(c)?`<button class="btn pri" style="padding:5px 12px;font-size:13px" onclick="openManual(null,'${c.id}')">✎ Edit</button>`:''}<button class="x" onclick="closeDrawer()">×</button></div></div>
   <div class="db">
     <div class="kv">
       <div><label>Date & time</label>${fmtD(c.date)} 2026, ${c.time}</div>
@@ -1418,7 +1434,7 @@ function openCall(id){
     <div class="sect">Interest level</div>
     ${c.lvl===null?`<div class="muted">${c.dur?'No key pressed during the call':'Not reached – no interest captured'}</div>`:
       `<div class="meter">${[0,1,2,3].map(i=>`<div style="background:${i<=c.lvl?LVL[c.lvl].c:'#eef0f5'}"></div>`).join('')}</div>
-       <div style="margin-top:8px"><b style="color:${LVL[c.lvl].c}">${LVL[c.lvl].l}</b> – pressed key <b>${c.key}</b>: ${KEYS[c.key].l}</div>`}
+       <div style="margin-top:8px"><b style="color:${LVL[c.lvl].c}">${LVL[c.lvl].l}</b>${c.key!=null&&KEYS[c.key]?` – pressed key <b>${c.key}</b>: ${KEYS[c.key].l}`:' – noted by the counsellor'}</div>`}
     <div class="sect">Call timeline</div>
     <div class="tl">${ev.map(e=>`<div class="e ${e[2]||''}"><span class="t">${mmss(e[0])}</span>${e[1]}</div>`).join('')}</div>
     <div class="sect">Reverted back</div>
@@ -1451,9 +1467,34 @@ function openCall(id){
       ${canAuto()?`<button class="btn" onclick="toast('Re-dial via bot: Phase 2')">🤖 Call again (bot)</button>`:''}
       <button class="btn" onclick="toast('WhatsApp follow-up: Phase 2')">💬 Send WhatsApp</button></div>
   </div>`;
-  document.getElementById('drawer').classList.add('on'); document.getElementById('ov').classList.add('on');
+  showDrawer(false);
 }
-function closeDrawer(){ document.getElementById('drawer').classList.remove('on'); document.getElementById('ov').classList.remove('on'); }
+function closeDrawer(){ const d=document.getElementById('drawer'); d.classList.remove('on'); document.getElementById('ov').classList.remove('on'); setTimeout(()=>{ if(!d.classList.contains('on')) d.classList.remove('wide'); },260); }
+function showDrawer(wide){ const d=document.getElementById('drawer'); d.classList.toggle('wide', !!wide); d.classList.add('on'); document.getElementById('ov').classList.add('on'); d.scrollTop = 0; }
+// Panel for a student who has not been called yet (queued) – same panel, with "Log call"
+function openCand(candId, qi){
+  const cand = candidates.find(x=>x.id===candId); if (!cand) return;
+  const q = qi!=null ? todayStats(true).Q[qi] : null;
+  document.getElementById('drawer').innerHTML = `
+  <div class="dh"><div><div class="muted" style="font-size:12px">${idChip(q&&q.state==='calling'?'Calling…':'Queued', q&&q.state==='calling'?'calling':'queued')} · ${cand.id} · ${q?q.kind+(q.kind==='Retry'?' #'+q.attempt:''):'Not called yet'}</div><h2 style="margin-top:6px">${cand.name}</h2>
+    <div class="muted">${cand.masked} · ${cand.city}</div><div style="margin-top:8px"><span class="pill" style="background:#f1f5f9;color:#64748b">⏳ Not called yet</span></div></div>
+    <button class="x" onclick="closeDrawer()">×</button></div>
+  <div class="db">
+    <div class="kv">
+      <div><label>Course (Excel)</label>${domName(cand.domain)}</div>
+      <div><label>Language (Excel)</label>${cand.lang}</div>
+      <div><label>Last exam score</label>${cand.score}%</div>
+      <div><label>Parent</label>${esc(cand.parent||'—')}</div>
+    </div>
+    <div class="sect">Call status</div><div class="muted">In today's queue – no call yet.</div>
+    <div class="sect">All call attempts for this candidate</div>
+    ${cand.calls.map(x=>`<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer" onclick="openCall('${x.id}')">${cid(x)}<span style="width:110px">${fmtD(x.date)}, ${x.time}</span>${statusPill(x.status)}<span class="muted" style="margin-left:auto">${x.dur?mmss(x.dur):'—'}</span></div>`).join('') || '<div class="muted">No earlier calls.</div>'}
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+      ${canManual()?`<button class="btn pri" onclick="openManual(${qi!=null?qi:'null'},null,'${cand.id}')">📞 Log call</button>`:''}
+      ${canAuto()?`<button class="btn" onclick="toast('The bot calls queued students when you press ▶ Start')">🤖 Bot will call (▶ Start)</button>`:''}</div>
+  </div>`;
+  showDrawer(false);
+}
 function setAdm(id,val){
   const c = calls.find(x=>x.id===id); c.admission = val;
   if (val==='Joined'){ if(!c.college) c.college = pick(COLLEGES[c.domain]); makeEvidence(c); }
@@ -1471,18 +1512,42 @@ function periodDays(){
   if (anaP==='lm')  return DAYS.filter(d=>d.getMonth()===(TODAY.getMonth()+11)%12);
   return DAYS;
 }
+let anaDay = '';
+// Graph cards fold open / closed (remembered in this browser)
+let foldCards = new Set(store.get('foldCards', []));
+function makeCollapsible(root){
+  root.querySelectorAll('.card').forEach(card=>{
+    const h = card.querySelector(':scope > h3'), ch = card.querySelector(':scope > .ch'); if (!h || !ch) return;
+    const key = (ch.querySelector('canvas')||{}).id || h.textContent.slice(0,30);
+    const tg = document.createElement('span'); tg.style.cssText = 'cursor:pointer;margin-right:6px;color:var(--muted)';
+    const set = () => { const shut = foldCards.has(key); ch.style.display = shut ? 'none' : ''; tg.textContent = shut ? '▸' : '▾'; };
+    h.prepend(tg); h.style.cursor = 'pointer'; h.title = 'Click to fold / unfold';
+    h.onclick = () => { foldCards.has(key) ? foldCards.delete(key) : foldCards.add(key); store.set('foldCards',[...foldCards]); set(); };
+    set();
+  });
+}
 function renderAnalytics(v){
   const PD = periodDays(), PS = new Set(PD.map(iso));
-  const L = domCalls().filter(c=>PS.has(iso(c.date)));
-  const M = msgs.filter(m=>matchDom(m.domain) && PS.has(iso(m.date)));
+  // College filter (header / this page): calls for that college's course; admissions only for that college
+  const COL = colFilter ? COLLEGE_LIST.find(x=>x.name===colFilter) : null;
+  const inCol = c => !COL || c.domain===COL.domain;
+  const L = domCalls().filter(c=>PS.has(iso(c.date)) && inCol(c));
+  const M = msgs.filter(m=>matchDom(m.domain) && PS.has(iso(m.date)) && (!COL || m.domain===COL.domain));
   const ans = L.filter(c=>c.status==='answered'), comp = L.filter(c=>c.completed), intr = L.filter(c=>c.lvl>=2);
-  const rev = L.filter(c=>c.reverted), joined = L.filter(c=>c.admission==='Joined'), inproc = L.filter(c=>c.admission==='In process');
+  const rev = L.filter(c=>c.reverted), joined = L.filter(c=>c.admission==='Joined' && (!COL || c.college===COL.name)), inproc = L.filter(c=>c.admission==='In process' && (!COL || c.college===COL.name));
+  // Day board (default today)
+  const bd = anaDay || iso(TODAY), BL = domCalls().filter(c=>iso(c.date)===bd && inCol(c)), bn = st => BL.filter(c=>c.status===st).length;
+  const bit = (l,val,c)=>`<div class="it" style="border-top:3px solid ${c}"><b style="color:${c}">${val}</b><span>${l}</span></div>`;
   const avg = ans.length ? ans.reduce((s,c)=>s+c.dur,0)/ans.length : 0;
   v.innerHTML = `
-  <div class="filters"><select onchange="setDom(this.value)"><option value="all">All courses</option>${LEVELS.map(l=>`<optgroup label="${l.name}"><option value="L:${l.id}" ${curDom==='L:'+l.id?'selected':''}>All ${l.name.split(' (')[0]}</option>${Object.entries(GROUPS).filter(([k,g])=>g.lv===l.id).map(([k,g])=>`<option value="G:${k}" ${curDom==='G:'+k?'selected':''}>All ${g.full}</option>`).join('')}${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${curDom===d.id?'selected':''}>${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</option>`).join('')}</optgroup>`).join('')}</select>
+  <div class="filters compact"><select onchange="setDom(this.value)"><option value="all">All courses</option>${LEVELS.map(l=>`<optgroup label="${l.name}"><option value="L:${l.id}" ${curDom==='L:'+l.id?'selected':''}>All ${l.name.split(' (')[0]}</option>${Object.entries(GROUPS).filter(([k,g])=>g.lv===l.id).map(([k,g])=>`<option value="G:${k}" ${curDom==='G:'+k?'selected':''}>All ${g.full}</option>`).join('')}${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${curDom===d.id?'selected':''}>${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</option>`).join('')}</optgroup>`).join('')}</select>
+    <select onchange="colFilter=this.value;renderAll()" title="College"><option value="">🏫 All colleges</option>${collegeOptions(colFilter)}</select>
     <select onchange="anaP=this.value;renderView()">
     ${[['14d','Last 14 days'],['tm','This month (Nov)'],['lm','Last month (Oct)'],['all','All time']].map(o=>`<option value="${o[0]}" ${anaP===o[0]?'selected':''}>📅 ${o[1]}</option>`).join('')}</select>
-    <span class="muted">${fmtD(PD[0])} – ${fmtD(PD[PD.length-1])} 2026</span></div>
+    <span class="muted">${fmtD(PD[0])} – ${fmtD(PD[PD.length-1])} 2026</span>${COL?`<span class="muted">· calls for ${shortDom(COL.domain)}, admissions for ${esc(COL.name)}</span>`:''}</div>
+  <div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;margin-bottom:12px">
+    <b>📅 Day board</b><select onchange="anaDay=this.value;renderView()">${Array.from({length:14},(_,i)=>{ const d=new Date(TODAY); d.setDate(d.getDate()-i); return `<option value="${iso(d)}" ${iso(d)===bd?'selected':''}>${i===0?'Today · ':i===1?'Yesterday · ':''}${fmtD(d)}</option>`; }).join('')}</select>
+    <div class="sb" style="margin:0">${bit('Calls',BL.length,'#1c2333')}${bit('Accepted',bn('answered'),'#16a34a')}${bit('Rejected',bn('rejected'),'#dc2626')}${bit('Not picked',bn('not_picked'),'#ea580c')}${bit('Heard fully',BL.filter(c=>c.completed).length,'#4f46e5')}${bit('Interested',BL.filter(c=>c.lvl>=2).length,'#2563eb')}${bit('Msgs sent',msgs.filter(m=>iso(m.date)===bd && matchDom(m.domain) && (!COL||m.domain===COL.domain)).length,'#0891b2')}${bit('Joined',BL.filter(c=>c.admission==='Joined').length,'#7c3aed')}</div></div>
   <div class="kpis">
     ${kpi('Calls made', L.length, new Set(L.map(c=>c.cand.id)).size+' candidates')}
     ${kpi('Answered', pct(ans.length,L.length)+'%', ans.length+' calls picked')}
@@ -1540,63 +1605,80 @@ function renderAnalytics(v){
     options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{...grid},y:{grid:{display:false}}}}});
   charts.c6 = new Chart(c6,{type:'bar',data:{labels:LANGS.map(l=>l.n),datasets:[{label:'Calls',data:LANGS.map(l=>L.filter(c=>c.lang===l.n).length),backgroundColor:'#818cf8',borderRadius:4}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{...grid}}}});
+  makeCollapsible(v);
 }
 
 /* ================= Admin: Seats & colleges ================= */
 function renderSeats(v){
   const rows = COLLEGE_LIST.map(seatRow), ds = COURSES.filter(d=>matchDom(d.id));
   const sum = (L,f)=>L.reduce((s,x)=>s+x[f],0);
-  const sel = rows.filter(r=>matchDom(r.domain));
+  const sel = rows.filter(r=>matchDom(r.domain) && (!colFilter || r.name===colFilter));
+  // Where am I: clickable path so you can always go back up (All courses › PU › Science › course)
+  const crumbs = [['all','All courses']];
+  if (curDom!=='all'){ const d = DOMAINS.find(x=>x.id===curDom), lv = curDom.startsWith('L:') ? curDom.slice(2) : curDom.startsWith('G:') ? GROUPS[curDom.slice(2)].lv : d && d.lv;
+    if (lv) crumbs.push(['L:'+lv, LEVELS.find(l=>l.id===lv).name]);
+    const g = curDom.startsWith('G:') ? curDom.slice(2) : d && d.grp; if (g) crumbs.push(['G:'+g, GROUPS[g].name]);
+    if (d) crumbs.push([d.id, d.name]); }
+  const listSt = d => dbStatus(d.id);
   v.innerHTML = `
+  <div class="card" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;margin-bottom:12px">
+    <b>Showing:</b><span class="crumbs">${crumbs.map(([id,l],i)=>i<crumbs.length-1?`<a href="#" onclick="event.preventDefault();setDom('${id}')">${l}</a> ›`:`<b>${l}</b>`).join(' ')}</span>
+    <select onchange="setDom(this.value)" title="Choose a course"><option value="all">All courses</option>${LEVELS.map(l=>`<optgroup label="${l.name}"><option value="L:${l.id}" ${curDom==='L:'+l.id?'selected':''}>All ${l.name.split(' (')[0]}</option>${Object.entries(GROUPS).filter(([k,g])=>g.lv===l.id).map(([k,g])=>`<option value="G:${k}" ${curDom==='G:'+k?'selected':''}>All ${g.full}</option>`).join('')}${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${curDom===d.id?'selected':''}>${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</option>`).join('')}</optgroup>`).join('')}</select>
+    ${curDom!=='all'?`<button class="btn" style="padding:4px 10px" onclick="setDom('all')">↺ All courses</button>`:''}
+    ${colFilter?`<span class="pill" style="background:#eef2ff;color:#3730a3">🏫 ${esc(colFilter)} <a href="#" onclick="event.preventDefault();colFilter='';renderAll()">✕</a></span>`:''}</div>
   <div class="kpis">
     ${kpi('Colleges', sel.length, sel.filter(r=>r.st==='Full').length+' full · '+sel.filter(r=>r.st!=='Full').length+' open')}
-    ${kpi('Total seats', sum(sel,'total').toLocaleString('en-IN'), 'across all colleges')}
-    ${kpi('Filled by colleges', sum(sel,'college').toLocaleString('en-IN'), 'college / management handled')}
-    ${kpi('Allotted to us', sum(sel,'quota').toLocaleString('en-IN'), 'seats we are allowed to fill')}
+    ${kpi('Total seats', sum(sel,'total').toLocaleString('en-IN'), 'across these colleges')}
+    ${kpi('Allotted to us', sum(sel,'quota').toLocaleString('en-IN'), 'seats we may fill')}
     ${kpi('Filled by us', sum(sel,'filled').toLocaleString('en-IN'), pct(sum(sel,'filled'),sum(sel,'quota'))+'% of our quota')}
     ${kpi('Remaining for us', sum(sel,'rem').toLocaleString('en-IN'), 'seats still open')}
     ${kpi('Value of seats filled', lakh(sel.reduce((s,r)=>s+r.filled*r.fee,0)), 'yearly fee × seats filled')}
   </div>
-  <div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
-    <b>📥 Candidate lists (one per course)</b>
-    ${['Recent','This week','Old – re-upload','Empty'].map(k=>{ const n=ds.filter(d=>dbStatus(d.id).l===k).length; const st=dbStatus(ds.find(d=>dbStatus(d.id).l===k)?.id||ds[0].id); return n?`<span class="pill" style="color:${k==='Recent'?'#16a34a':k==='This week'?'#d97706':k==='Empty'?'#64748b':'#dc2626'};background:${k==='Recent'?'#dcfce7':k==='This week'?'#fef3c7':k==='Empty'?'#f1f5f9':'#fee2e2'}">${k}: ${n}</span>`:''; }).join('')}
-    <span class="muted" style="font-size:12px">Each course has its own students, phone numbers and audience. Upload per course below.</span>
-    <button class="btn pri" style="margin-left:auto" onclick="openUpload('${curDom.startsWith('L:')||curDom==='all'?'':curDom}')">⬆ Upload list</button></div>
-  ${LEVELS.filter(l=>ds.some(d=>d.lv===l.id)).map(l=>`<div class="sect" style="margin-top:4px">${l.ic} ${l.name}</div><div class="dgrid">${ds.filter(d=>d.lv===l.id).map(d=>{
-    const R = rows.filter(r=>r.domain===d.id), q=sum(R,'quota'), f=sum(R,'filled'), p=pct(f,q);
-    return `<div class="card dcard ${curDom===d.id?'sel':''}" onclick="setDom('${curDom===d.id?'all':d.id}')">
-      <h3>${d.ic} ${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</h3>
-      <div class="row"><span class="muted">Colleges</span><b>${R.length}</b></div>
-      <div class="row"><span class="muted">Full / Almost full / Open</span><b><span style="color:#dc2626">${R.filter(r=>r.st==='Full').length}</span> / <span style="color:#d97706">${R.filter(r=>r.st==='Almost full').length}</span> / <span style="color:#16a34a">${R.filter(r=>r.st==='Open').length}</span></b></div>
-      <div class="row"><span class="muted">Total seats</span><b>${sum(R,'total').toLocaleString('en-IN')}</b></div>
-      <div class="row"><span class="muted">Our quota · Filled · Left</span><b>${q} · ${f} · ${q-f}</b></div>
-      <div class="row"><span class="muted">Fee per seat / yr</span><b>${lakh(Math.min(...R.map(r=>r.fee)))} – ${lakh(Math.max(...R.map(r=>r.fee)))}</b></div>
-      <div class="prog"><i style="width:${p}%;background:${p>=100?'#dc2626':p>=80?'#d97706':'#4f46e5'}"></i></div>
-      <div class="muted" style="font-size:12px">${p}% of our seats filled</div>
-      <div class="dbrow"><div><div style="font-size:12px"><b>📋 Candidate list</b> ${dbPill(d.id)}</div>
-        <div class="muted" style="font-size:12px;margin-top:3px">${COURSE_DB[d.id].updated?`${COURSE_DB[d.id].recs} records · updated ${dbWhen(d.id)}`:'Empty – upload a list to start calling'}</div></div>
-        <button class="btn" onclick="event.stopPropagation();openUpload('${d.id}')">⬆ Upload</button></div></div>`;}).join('')}</div>`).join('')}
-  <div class="card" style="margin-bottom:16px"><h3>Our seat quota by course <small>· filled vs remaining</small></h3><div class="ch"><canvas id="c7"></canvas></div></div>
-  <div class="filters"><select onchange="setDom(this.value)"><option value="all">All courses</option>${LEVELS.map(l=>`<optgroup label="${l.name}"><option value="L:${l.id}" ${curDom==='L:'+l.id?'selected':''}>All ${l.name.split(' (')[0]}</option>${Object.entries(GROUPS).filter(([k,g])=>g.lv===l.id).map(([k,g])=>`<option value="G:${k}" ${curDom==='G:'+k?'selected':''}>All ${g.full}</option>`).join('')}${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${curDom===d.id?'selected':''}>${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</option>`).join('')}</optgroup>`).join('')}</select>
-    <select id="sst" onchange="fillSeatRows()"><option value="any">All statuses</option><option>Full</option><option>Almost full</option><option>Open</option></select>
+  <div class="grid2">
+    <div class="card"><h3>Our seats by course <small>· filled vs remaining</small></h3><div class="ch"><canvas id="c7"></canvas></div></div>
+    <div class="card"><h3>College status <small>· Open / Almost full / Full</small></h3><div class="ch"><canvas id="c12"></canvas></div></div></div>
+  <div class="grid2">
+    <div class="card"><h3>Most seats left for us <small>· top 10 colleges</small></h3><div class="ch"><canvas id="c13"></canvas></div></div>
+    <div class="card"><h3>Fee range by course <small>· ₹ lakh per year, lowest – highest</small></h3><div class="ch"><canvas id="c14"></canvas></div></div></div>
+  <div class="card mini" style="margin-bottom:12px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="margin:0">📥 Candidate lists <small>· one list per course</small></h3>
+      <span class="sp"></span><a class="btn" style="text-decoration:none" href="templates/AdmitConnect_Data_Template.xlsx" download>⬇ Excel template</a>
+      <button class="btn pri" onclick="openUpload('${curDom.startsWith('L:')||curDom.startsWith('G:')||curDom==='all'?'':curDom}')">⬆ Upload list</button></div>
+    <table style="margin-top:8px"><thead><tr><th>Course</th><th>Records</th><th>Last updated</th><th>Status</th><th>Colleges</th><th>Our seats left</th><th></th></tr></thead><tbody>
+    ${ds.map(d=>{ const R=rows.filter(r=>r.domain===d.id); return `<tr onclick="setDom('${d.id}')"><td><b>${d.ic} ${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</b></td>
+      <td>${COURSE_DB[d.id].updated?COURSE_DB[d.id].recs:'—'}</td><td>${COURSE_DB[d.id].updated?dbWhen(d.id):'<span class="muted">never</span>'}</td><td>${dbPill(d.id)}</td>
+      <td>${R.length}</td><td><b>${sum(R,'rem')}</b> <span class="muted">of ${sum(R,'quota')}</span></td>
+      <td><button class="btn" style="padding:3px 10px;font-size:12px" onclick="event.stopPropagation();openUpload('${d.id}')">⬆ Upload</button></td></tr>`; }).join('')}
+    </tbody></table></div>
+  <div class="filters"><select id="sst" onchange="fillSeatRows()"><option value="any">All statuses</option><option>Full</option><option>Almost full</option><option>Open</option></select>
     <span class="muted" id="src"></span><span class="muted">· Click a college to see its seat chart</span></div>
   <div class="tw fit"><table>
-    <thead><tr><th>College / Institute</th><th>Course</th><th>Total seats</th><th>Filled by college</th><th>Allotted to us</th><th>Filled by us</th><th>Remaining</th><th>Progress</th><th>Status</th><th>Fee / seat / yr</th><th>Value filled</th><th>This campaign</th></tr></thead>
+    <thead><tr><th>College / Institute</th><th>Course</th><th>District</th><th>Total seats</th><th>Allotted to us</th><th>Filled by us</th><th>Remaining</th><th>Progress</th><th>Status</th><th>Fee / seat / yr</th><th>Value filled</th><th>This campaign</th></tr></thead>
     <tbody id="srows"></tbody></table></div>`;
   fillSeatRows();
+  const grid = {grid:{color:'#eef0f5'}};
   charts.c7 = new Chart(c7,{type:'bar',data:{labels:ds.map(d=>shortDom(d.id)),datasets:[
-    {label:'Filled by us',data:ds.map(d=>sum(rows.filter(r=>r.domain===d.id),'filled')),backgroundColor:'#4f46e5',borderRadius:3},
-    {label:'Remaining',data:ds.map(d=>sum(rows.filter(r=>r.domain===d.id),'rem')),backgroundColor:'#c7d2fe',borderRadius:3}]},
-    options:{maintainAspectRatio:false,scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:'#eef0f5'}}},plugins:{legend:{position:'bottom'}}}});
+    {label:'Filled by us',data:ds.map(d=>sum(sel.filter(r=>r.domain===d.id),'filled')),backgroundColor:'#4f46e5',borderRadius:3},
+    {label:'Remaining',data:ds.map(d=>sum(sel.filter(r=>r.domain===d.id),'rem')),backgroundColor:'#c7d2fe',borderRadius:3}]},
+    options:{maintainAspectRatio:false,scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,...grid}},plugins:{legend:{position:'bottom'}}}});
+  const stN = k => sel.filter(r=>r.st===k).length;
+  charts.c12 = new Chart(c12,{type:'doughnut',data:{labels:['Open','Almost full','Full'],datasets:[{data:[stN('Open'),stN('Almost full'),stN('Full')],backgroundColor:[SEAT_ST['Open'].c,SEAT_ST['Almost full'].c,SEAT_ST['Full'].c]}]},
+    options:{maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom'}}}});
+  const top = [...sel].sort((a,b)=>b.rem-a.rem).slice(0,10);
+  charts.c13 = new Chart(c13,{type:'bar',data:{labels:top.map(r=>r.name.length>28?r.name.slice(0,27)+'…':r.name),datasets:[{label:'Seats left for us',data:top.map(r=>r.rem),backgroundColor:top.map(r=>SEAT_ST[r.st].c),borderRadius:3}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{afterLabel:i=>shortDom(top[i.dataIndex].domain)+' · '+lakh(top[i.dataIndex].fee)+'/yr'}}},scales:{x:{...grid},y:{grid:{display:false}}}}});
+  const fr = ds.map(d=>{ const F=sel.filter(r=>r.domain===d.id).map(r=>r.fee); return F.length?[Math.min(...F),Math.max(...F)]:null; });
+  charts.c14 = new Chart(c14,{type:'bar',data:{labels:ds.map(d=>shortDom(d.id)),datasets:[{label:'Fee range (₹ L/yr)',data:fr,backgroundColor:'#a5b4fc',borderColor:'#4f46e5',borderWidth:1,borderRadius:4,borderSkipped:false}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>i.raw?'₹'+i.raw[0].toFixed(2)+' L – ₹'+i.raw[1].toFixed(2)+' L':''}}},scales:{x:{grid:{display:false}},y:{...grid,title:{display:true,text:'₹ lakh / year'}}}}});
+  makeCollapsible(v);
 }
 function fillSeatRows(){
   let R = COLLEGE_LIST.map(seatRow);
-  R = R.filter(r=>matchDom(r.domain));
+  R = R.filter(r=>matchDom(r.domain) && (!colFilter || r.name===colFilter));
   const f = document.getElementById('sst').value; if (f!=='any') R = R.filter(r=>r.st===f);
   R.sort((a,b)=>a.domain.localeCompare(b.domain)||b.p-a.p);
   document.getElementById('src').textContent = R.length+' colleges';
   document.getElementById('srows').innerHTML = R.map(r=>`<tr onclick="openSeat('${r.name.replace(/'/g,"\\'")}')">
-    <td><b>${r.name}</b></td><td>${shortDom(r.domain)}</td><td>${r.total}</td><td>${r.college}</td><td>${r.quota}</td>
+    <td><b>${r.name}</b></td><td>${shortDom(r.domain)}</td><td>${r.district||'—'}${r.area?' · '+r.area:''}</td><td>${r.total}</td><td>${r.quota}</td>
     <td><b>${r.filled}</b></td><td>${r.rem}</td>
     <td><span class="bar"><i style="width:${r.p}%;background:${SEAT_ST[r.st].c}"></i></span>${r.p}%</td>
     <td><span class="pill" style="color:${SEAT_ST[r.st].c};background:${SEAT_ST[r.st].bg}">${r.st}</span></td>
@@ -1681,14 +1763,39 @@ function renderCollege(v){
    Left: things you change (profile, theme, general, bot, users)
    Right: read-only guide (call flow, IVR keys, colour meanings) */
 const THEMES = [['light', 'Light', ['#111827', '#4f46e5', '#f5f6fa']], ['dark', 'Dark', ['#060b16', '#6366f1', '#121b2e']], ['ocean', 'Ocean', ['#0c2a3e', '#0284c7', '#f2f8fc']], ['forest', 'Forest', ['#0f2a1c', '#15803d', '#f3f8f4']], ['sunset', 'Sunset', ['#2b1608', '#ea580c', '#fbf6f2']]];
+let setSec = 'profile';
+// College details: admin can edit fee / seats / location / min score; everyone else sees them read-only
+function collegeDetailsCard(){
+  const isAd = role==='admin';
+  let L = COLLEGE_LIST.filter(x=>matchDom(x.domain));
+  if (role==='college') L = L.filter(x=>x.name===myCollege);
+  const ed = (x,k,w,type='text') => isAd ? `<input ${type==='number'?'type="number" step="any"':''} style="width:${w}px;padding:4px 6px" value="${esc(String(x[k]??''))}" onchange="setColField('${esc(x.name).replace(/'/g,"\\'")}','${x.domain}','${k}',this.value)">` : esc(String(x[k]??'—'));
+  return `<div class="card mini" data-sec="college"><h3>🏫 College details <small>· ${isAd?'you can edit (saved in this browser for the demo)':'read-only – set by the admin'}</small></h3>
+    <div class="muted" style="font-size:12px;margin-bottom:8px">${L.length} colleges${curDom!=='all'?' for '+shortDom(curDom.replace(/^[LG]:/,''))||'':''}. Choose a course in the left panel to narrow the list. Mock values until real data is uploaded (see the Excel template on Seats &amp; colleges).</div>
+    <div style="max-height:60vh;overflow:auto"><table><thead><tr><th>College</th><th>Course</th><th>District</th><th>Area</th><th>Fee ₹ L/yr</th><th>Total seats</th><th>Our quota</th><th>Min score %</th></tr></thead><tbody>
+    ${L.map(x=>`<tr style="cursor:default"><td><b>${esc(x.name)}</b></td><td>${shortDom(x.domain)}</td><td>${isAd?`<select style="padding:4px" onchange="setColField('${esc(x.name).replace(/'/g,"\\'")}','${x.domain}','district',this.value)">${KA_DISTRICTS.map(d=>`<option ${d===x.district?'selected':''}>${d}</option>`).join('')}</select>`:x.district}</td>
+      <td>${ed(x,'area',110)}</td><td>${ed(x,'fee',70,'number')}</td><td>${ed(x,'total',70,'number')}</td><td>${ed(x,'quota',70,'number')}</td><td>${ed(x,'minScore',60,'number')}</td></tr>`).join('')}
+    </tbody></table></div></div>`;
+}
+function setColField(name, dom, k, val){
+  const x = COLLEGE_LIST.find(c=>c.name===name && c.domain===dom); if (!x) return;
+  x[k] = ['fee','total','quota','minScore'].includes(k) ? +val : val;
+  if (k==='total' || k==='quota') x.college = Math.max(0, x.total - x.quota);
+  toast(name+' – '+k+' updated (demo)');
+}
 function renderSettings(v){
   // Real database accounts: name / email / phone come from the database (read-only). Demo user: fixed "Demo Admin".
   const locked = k => (sbMe && ['name','email','phone','id'].includes(k)) || (profile.id==='DEMO' && ['name','email','phone','id'].includes(k));
   const inp = (k,l,ph)=>`<div><label>${l}${locked(k)?' <span class="muted">(managed by admin)</span>':''}</label><input value="${esc(profile[k]||'')}" placeholder="${ph||''}" ${locked(k)?'disabled':`oninput="setProf('${k}',this.value)"`}></div>`;
   const who = sbMe ? `🟢 Logged in to the database as <b>${esc(sbMe.full_name)}</b> (${sbMe.role})` : profile.id==='DEMO' ? '🟡 Demo user – mock data only, not a database account' : '';
-  v.innerHTML = `<div class="sgrid">
+  const SECS = [['profile','👤','My profile',true],['appearance','🎨','Appearance',true],['message','✉','Message settings',role!=='college'],
+    ['callmode','📞','Calling mode',isAdmin],['bot','🤖','Bot call settings',isAdmin],['users','👥','Users & roles',isAdmin],
+    ['college','🏫','College details',true],['guide','📘','Guides',role!=='college']].filter(x=>x[3]);
+  if (!SECS.some(x=>x[0]===setSec)) setSec = 'profile';
+  v.innerHTML = `<div class="setwrap"><nav class="setnav">${SECS.map(([id,ic,l])=>`<div class="${id===setSec?'on':''}" onclick="setSec='${id}';renderView()"><span>${ic}</span>${l}${id==='message'&&!isAdmin||id==='college'&&!isAdmin?' <small class="muted">(view)</small>':''}</div>`).join('')}</nav>
+  <div class="sgrid one">
   <div>
-    ${isAdmin?`<div class="card"><h3>📞 Calling mode <small>· per counsellor</small></h3>
+    ${isAdmin?`<div class="card" data-sec="callmode"><h3>📞 Calling mode <small>· per counsellor</small></h3>
       <div class="muted" style="font-size:13px;margin-bottom:10px"><b>🤖 Automatic</b> – the bot calls students one by one and records call time, keys pressed and voice queries.<br>
         <b>✍ Manual</b> – the counsellor calls from their own phone and logs status, talk time, interest, the student's message and admission by hand.<br>Admins always have both.</div>
       <div class="mini"><table><thead><tr><th>Counsellor</th><th>ID</th><th>Calling mode</th></tr></thead><tbody>
@@ -1699,7 +1806,7 @@ function renderSettings(v){
         <option value="auto" ${defaultMode==='auto'?'selected':''}>🤖 Automatic</option><option value="manual" ${defaultMode==='manual'?'selected':''}>✍ Manual</option></select></div>
         <div><label>Preview a counsellor's view</label><select onchange="if(this.value)setRole(this.value)"><option value="">— choose —</option>${counsellors().map(c=>`<option value="counsellor:${c.id}">${c.name} (${MODE_LBL[modeOf(c.id)]})</option>`).join('')}</select></div></div></div>
 `:''}
-    <div class="card"><h3>👤 My profile <small>· shown in the left panel</small></h3>${who?`<div style="font-size:13px;margin:-4px 0 10px">${who}</div>`:''}<div class="set">
+    <div class="card" data-sec="profile"><h3>👤 My profile <small>· shown in the left panel</small></h3>${who?`<div style="font-size:13px;margin:-4px 0 10px">${who}</div>`:''}<div class="set">
       ${inp('name','Full name','e.g. Karthik S')}
       ${(!sbMe || sbMe.role==='admin') ? `<div><label>${T('role')} (preview only – does not change any account)</label><select onchange="setRole(this.value)">${roleOptions(false)}</select></div>`
       : `<div><label>${T('role')}</label><input value="${T(ROLES.find(r=>r[0]===role)[1])} (set by your admin)" disabled></div>`}
@@ -1709,13 +1816,13 @@ function renderSettings(v){
       ${role==='admin' ? inp('branch','Branch / Office','Chennai') : ''}
     </div><div class="muted" style="font-size:12px;margin-top:8px">Changes here are saved automatically in <b>this browser only</b>. They do not change your login account. To give someone Admin access, approve their account as Admin with the 🔔 bell.</div></div>
 
-    ${role==='counsellor'?`<div class="card"><h3>📞 Your calling mode</h3><div style="font-size:15px"><b>${MODE_LBL[modeOf(actingC)]}</b> <span class="muted">– set by your admin</span></div>
+    ${role==='counsellor'?`<div class="card" data-sec="profile"><h3>📞 Your calling mode</h3><div style="font-size:15px"><b>${MODE_LBL[modeOf(actingC)]}</b> <span class="muted">– set by your admin</span></div>
       <div class="muted" style="font-size:13px;margin-top:6px">${modeOf(actingC)==='auto'?'Press ▶ Start on Today\'s campaign; the bot calls and records everything.':'In Today\'s campaign, press 📞 Log call next to each student after you call them, and fill in the result.'}</div></div>`:''}
-    <div class="card"><h3>🎨 Theme</h3><div class="themes">
+    <div class="card" data-sec="appearance"><h3>🎨 Theme</h3><div class="themes">
       ${THEMES.map(([id,n,c])=>`<div class="th ${theme===id?'on':''}" onclick="setTheme('${id}')"><div class="sw2">${c.map(x=>`<span style="background:${x}"></span>`).join('')}</div>${n}</div>`).join('')}
     </div></div>
 
-    <div class="card"><h3>🌐 ${isAdmin?'General':'Language'}</h3><div class="set">
+    <div class="card" data-sec="profile"><h3>🌐 Language${isAdmin?' &amp; general':''}</h3><div class="set">
       <div><label>Interface language</label><select onchange="setLang(this.value)">
         <option value="en" ${lang==='en'?'selected':''}>English</option><option value="ta" ${lang==='ta'?'selected':''}>தமிழ் (Tamil)</option><option value="hi" ${lang==='hi'?'selected':''}>हिन्दी (Hindi)</option></select></div>
       ${isAdmin?`<div><label>Time zone</label><select><option>Asia/Kolkata (IST, UTC+5:30)</option></select></div>
@@ -1725,7 +1832,7 @@ function renderSettings(v){
       <div><label>Keep call recordings for</label><select><option>90 days</option><option>180 days</option><option>1 year</option></select></div>`:''}
     </div></div>
 
-    ${isAdmin?`    <div class="card"><h3>📞 Bot call settings</h3><div class="set">
+    ${isAdmin?`    <div class="card" data-sec="bot"><h3>📞 Bot call settings</h3><div class="set">
       <div style="grid-column:1/-1"><label>Languages offered on the call</label><div class="cbx">${LANGS.map(l=>`<label><input type="checkbox" checked> ${l.k} – ${l.n}</label>`).join('')}</div></div>
       <div><label>Default language (no key pressed)</label><select>${LANGS.map(l=>`<option>${l.n}</option>`).join('')}</select></div>
       <div><label>Calling hours</label><input value="09:30 – 18:30"></div>
@@ -1737,15 +1844,15 @@ function renderSettings(v){
       <div><label>Parallel calls</label><select><option>1 (one by one)</option><option>5</option><option>10</option></select></div>
     </div><div style="margin-top:14px"><button class="btn pri" onclick="toast('Settings saved (demo only)')">Save settings</button></div></div>
 
-    <div class="card mini"><div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0">👥 Users &amp; roles <small>· real accounts · one admin · created by the admin only</small></h3><span class="sp"></span><button class="btn pri" onclick="openAddUser()">➕ Add user</button></div><div id="acctList" class="muted" style="margin-top:10px">Loading…</div></div>
-    <div class="card mini"><h3>🔁 Transfer admin role <small>· there is only one admin</small></h3><div class="muted" style="font-size:13px;margin-bottom:8px">Hand the admin role to another user (e.g. when the owner changes). You become a Counsellor. No backend work needed.</div><div id="xferBox">Loading…</div></div>
-    <div class="card"><h3>🏫 College partner access</h3><div class="set">
+    <div class="card mini" data-sec="users"><div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0">👥 Users &amp; roles <small>· real accounts · one admin · created by the admin only</small></h3><span class="sp"></span><button class="btn pri" onclick="openAddUser()">➕ Add user</button></div><div id="acctList" class="muted" style="margin-top:10px">Loading…</div></div>
+    <div class="card mini" data-sec="users"><h3>🔁 Transfer admin role <small>· there is only one admin</small></h3><div class="muted" style="font-size:13px;margin-bottom:8px">Hand the admin role to another user (e.g. when the owner changes). You become a Counsellor. No backend work needed.</div><div id="xferBox">Loading…</div></div>
+    <div class="card" data-sec="college"><h3>🏫 College partner access</h3><div class="set">
       <div style="grid-column:1/-1"><label>College shown in the College partner view (demo)</label><select onchange="myCollege=this.value;toast('College partner view will show '+this.value)">${collegeOptions(myCollege)}</select></div>
     </div><div class="muted" style="font-size:12px;margin-top:8px">A live system gives each college its own login that only shows its own seats.</div></div>`:''}
   </div>
 
   <div>
-    ${role==='college' ? `<div class="card mini"><h3>📘 Guide · Your seat dashboard</h3><table><tbody>
+    ${role==='college' ? `<div class="card mini" data-sec="college"><h3>📘 Your seat dashboard explained</h3><table><tbody>
       <tr><td><b>Total seats</b></td><td>Your full intake for this course</td></tr>
       <tr><td><b>With college</b></td><td>Seats you fill directly (management / direct admissions)</td></tr>
       <tr><td><b>Given to AdmitConnect</b></td><td>Seats allotted to us to fill</td></tr>
@@ -1753,14 +1860,14 @@ function renderSettings(v){
       <tr><td><b>Open seats</b></td><td>Seats still available, split into your seats and ours</td></tr>
       <tr><td><b>Status</b></td><td><span class="pill" style="color:#16a34a;background:#dcfce7">Open</span> <span class="pill" style="color:#d97706;background:#fef3c7">Almost full</span> (80%+) <span class="pill" style="color:#dc2626;background:#fee2e2">Full</span></td></tr>
       </tbody></table><div class="note">You only see data for your own college. Call details and student contact numbers are not shared.</div></div>` : `
-    ${isAdmin?`<div class="card"><h3>✉ Message format <small>· WhatsApp / SMS to parents</small></h3>
+    <div class="card" data-sec="message"><h3>✉ Message format <small>· WhatsApp / SMS to parents${isAdmin?'':' · read-only (set by your admin)'}</small></h3>
       <div class="sect" style="margin-top:0">Step 1 · First message <span class="muted" style="font-weight:400">– sent after every call (answered or missed)</span></div>
-      <div class="msg rep"><q>${MSG_TEMPLATE}</q></div>
+      ${isAdmin?`<textarea rows="9" style="width:100%" onchange="MSG_TEMPLATE=this.value;toast('First message updated (this browser only, demo)')">${esc(MSG_TEMPLATE)}</textarea>`:`<div class="msg rep"><q>${MSG_TEMPLATE}</q></div>`}
       <div class="sect">Step 2 · Follow-up <span class="muted" style="font-weight:400">– 2 days later, only if there was no reply or click</span></div>
-      <div class="msg rep"><q>${MSG_FOLLOWUP}</q></div>
+      ${isAdmin?`<textarea rows="9" style="width:100%" onchange="MSG_FOLLOWUP=this.value;toast('Follow-up message updated (this browser only, demo)')">${esc(MSG_FOLLOWUP)}</textarea>`:`<div class="msg rep"><q>${MSG_FOLLOWUP}</q></div>`}
       <div class="muted" style="font-size:12px">Filled automatically: [Parent name], [Student Name]; UG/PG students see their course instead of “PU colleges with JEE / NEET coaching”.
-      Replies: <b>SHOW ME</b> = High · <b>Send details</b> = Medium · <b>Later</b> = Low · <b>STOP</b> = Not interested.</div></div>`:''}
-    <div class="card"><h3>📘 Guide · Bot call flow <small>· ${mmss(SCRIPT_SEC)} message</small></h3><div class="tl">
+      Replies: <b>SHOW ME</b> = High · <b>Send details</b> = Medium · <b>Later</b> = Low · <b>STOP</b> = Not interested.</div></div>
+    <div class="card" data-sec="guide"><h3>📘 Guide · Bot call flow <small>· ${mmss(SCRIPT_SEC)} message</small></h3><div class="tl">
       <div class="e"><span class="t">0:00</span>Greeting – "This call is to help students looking for college admissions…"</div>
       <div class="e k"><span class="t">${mmss(T_LANG)}</span>Step 1 · Choose language</div>
       <div class="e k"><span class="t">${mmss(T_LVL)}</span>Step 2 · Choose level – PU / Degree / Masters</div>
@@ -1769,7 +1876,7 @@ function renderSettings(v){
       <div class="e k"><span class="t">${mmss(MENU_AT)}</span>Step 5 · Interest menu (1 / 2 / 3 / 0, 9 repeat)</div>
       <div class="e q"><span class="t">${mmss(T_Q)}</span>Step 6 · "Press 8 to record a question for our counsellor"</div>
       <div class="e end"><span class="t">${mmss(SCRIPT_SEC)}</span>Thank-you – call ends (counted as "Heard fully")</div></div></div>
-    <div class="card mini"><h3>📘 Guide · IVR keys</h3>
+    <div class="card mini" data-sec="guide"><h3>📘 Guide · IVR keys</h3>
       <table><thead><tr><th>Menu</th><th>Keys</th></tr></thead><tbody>
         <tr><td><b>1 · Language</b></td><td>${LANGS.map(l=>`<b>${l.k}</b> ${l.n}`).join(' · ')}</td></tr>
         <tr><td><b>2 · Level</b></td><td>${LEVELS.map(l=>`<b>${l.key}</b> ${l.name}`).join(' · ')}</td></tr>
@@ -1777,7 +1884,7 @@ function renderSettings(v){
         <tr><td><b>4 · Interest</b></td><td>${Object.entries(KEYS).map(([k,o])=>`<b>${k}</b> ${o.l}`).join('<br>')}</td></tr>
         <tr><td><b>Any time</b></td><td><b>8</b> Record a question for the counsellor<br><b>9</b> Repeat the current menu</td></tr>
       </tbody></table></div>
-    <div class="card mini"><h3>📘 Guide · Colours</h3>
+    <div class="card mini" data-sec="guide"><h3>📘 Guide · Colours</h3>
       <table><tbody>
         ${Object.values(CK).map(k=>`<tr><td>${idChip('CL-0000',Object.keys(CK).find(x=>CK[x]===k))}</td><td>Call ID – ${k.l}</td></tr>`).join('')}
         ${Object.entries(STATUS).map(([k,o])=>`<tr><td>${statusPill(k)}</td><td>Call outcome</td></tr>`).join('')}
@@ -1786,7 +1893,10 @@ function renderSettings(v){
         ${Object.keys(MSTATUS).map(k=>`<tr><td>${mstatusPill(k)}</td><td>Message status</td></tr>`).join('')}
         <tr><td>🔗 / 💬</td><td>Message interest – replied SHOW ME (high), Send details (medium), Later (low), STOP (not interested)</td></tr>
       </tbody></table></div>`}
-  </div></div>`;
+  </div>
+  <div>${collegeDetailsCard()}</div></div></div>`;
+  // show only the chosen section
+  v.querySelectorAll('[data-sec]').forEach(el=>{ el.style.display = el.dataset.sec===setSec ? '' : 'none'; });
 }
 
 /* ================= Upload placeholder ================= */
@@ -1827,9 +1937,9 @@ function openManual(qi, callId, candId){
   // single-choice tick boxes (tick again to clear); hidden input keeps the value
   const cbx = (id, arr, sel, after='') => `<input type="hidden" id="${id}" value="${esc(String(sel||''))}"><div class="rchips" style="gap:6px 16px">${arr.map(([val,l])=>
       `<label style="display:inline-flex;gap:6px;align-items:center;font-size:14px;font-weight:400;width:auto;margin:0;color:inherit;cursor:pointer"><input type="checkbox" style="width:16px;height:16px;margin:0" data-g="${id}" data-v="${esc(val)}" ${String(sel||'')===String(val)?'checked':''} onchange="tickOne(this);${after}"> ${l}</label>`).join('')}</div>`;
-  const box = document.getElementById('mcBox'); box.classList.add('wide');
-  box.innerHTML = `
-    <div style="display:flex;align-items:center"><h2 style="margin:0;font-size:18px">${c?'✎ Edit call':'📞 Log manual call'}</h2><button class="x" onclick="closeMc()">×</button></div>
+  const box = document.getElementById('drawer');
+  box.innerHTML = `<div class="mcwrap">
+    <div style="display:flex;align-items:center;gap:10px"><button class="btn" style="padding:4px 10px;font-size:13px" onclick="closeMc()">← Back</button><h2 style="margin:0;font-size:18px">${c?'✎ Edit call':'📞 Log manual call'}</h2><button class="x" onclick="closeDrawer()">×</button></div>
     <div class="muted" style="margin:4px 0 12px">${cand.name} · ${cand.masked} · ${domName(c?c.domain:cand.domain)} · Score <b>${cand.score}%</b> · ${cand.city}${c?' · '+c.id+(c.manual?'':' (bot call – admin edit)'):''}</div>
     <div class="muted" style="font-size:12px;margin:-6px 0 10px"><span class="rqd">*</span> = required before saving (for answered calls). Everything else is optional.</div>
     <div class="mc-grid"><div>
@@ -1852,7 +1962,7 @@ function openManual(qi, callId, candId){
     </div></div>
     <div class="mc-right" id="mcRight"></div></div>
     <div class="aerr" id="mErr"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" onclick="closeMc()">Cancel</button><button class="btn pri" onclick="saveManual()">Save call</button></div>`;
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" onclick="closeMc()">Cancel</button><button class="btn pri" onclick="saveManual()">Save call</button></div></div>`;
   // Course picker: level → (PU) Science / Commerce → tick boxes for the courses under it
   const start = (c && c.courses) || [v('chosenDom',null)||cand.domain];
   const d0 = DOMAINS.find(d=>d.id===start[0]) || COURSES[0];
@@ -1862,7 +1972,7 @@ function openManual(qi, callId, candId){
   mcCtx.f = mcCtx.f || {fee:'', fit:true, open:true, sort:'near', km:''};
   renderArea(); renderCourseBox();
   if (c && c.locality && c.locality.pin) onPin(c.locality.pin);
-  document.getElementById('mcModal').classList.add('on');
+  showDrawer(true);
 }
 function renderArea(){
   const el = document.getElementById('mArea'); if (!el) return;
@@ -1890,7 +2000,10 @@ function pickChip(id, btn){
   document.getElementById(id).value = btn.dataset.v;
   btn.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('pri', b===btn));
 }
-function closeMc(){ const m=document.getElementById('mcModal'); m.classList.remove('on'); document.getElementById('mcBox').classList.remove('wide'); }
+function closeMc(){   // back to the details panel (or close if there is nothing to go back to)
+  const {c, q, cand} = mcCtx || {};
+  if (c) openCall(c.id); else if (cand) openCand(cand.id, q ? todayStats(true).Q.indexOf(q) : null); else closeDrawer();
+}
 // Right-hand panel: colleges for the ticked course(s), filtered by fee / candidate score / open seats
 function renderColleges(){
   const el = document.getElementById('mcRight'); if (!el) return;
@@ -1970,7 +2083,7 @@ function saveManual(){
   const courses = COURSES.filter(d=>mcCtx.ticks.has(d.id)).map(d=>d.id);
   const st = g('mStatus'), durMin = parseFloat(g('mDur')||'0'), lvl = g('mLvl'), dom = courses[0] || cand.domain;
   // Required fields: status + time always; for answered calls also talk time, language, interest, district, course
-  document.querySelectorAll('#mcBox .mc-miss').forEach(x=>x.classList.remove('mc-miss'));
+  document.querySelectorAll('#drawer .mc-miss').forEach(x=>x.classList.remove('mc-miss'));
   const miss = [], mark = (id,label) => { miss.push(label); const el=document.getElementById(id); if (el) el.classList.add('mc-miss'); };
   if (!g('mTime')) mark('mTime','Time of call');
   if (st==='answered'){
@@ -1980,7 +2093,7 @@ function saveManual(){
     if (!g('mDist')) mark('mDist','Preferred district');
     if (!courses.length) mark('mCourseBox','Course discussed');
   }
-  if (miss.length){ document.getElementById('mErr').innerHTML = '⚠ Please fill the required fields: <b>'+miss.join(', ')+'</b>'; document.querySelector('#mcBox .mc-miss').scrollIntoView({block:'center',behavior:'smooth'}); return; }
+  if (miss.length){ document.getElementById('mErr').innerHTML = '⚠ Please fill the required fields: <b>'+miss.join(', ')+'</b>'; document.querySelector('#drawer .mc-miss').scrollIntoView({block:'center',behavior:'smooth'}); return; }
   const by = role==='admin' ? (profile.name||'Admin') : cName(actingC);
   if (!c){   // new manual call (from queue or from a candidate)
     const att = q ? q.attempt : cand.calls.length+1;
@@ -2005,9 +2118,8 @@ function saveManual(){
   if (['Joined','In process','Dropped'].includes(c.admission)){ c.college = g('mCol'); if (!c.revertDate) c.revertDate = TODAY; }
   if (c.admission==='Joined') makeEvidence(c);
   ensureAdmId(c);
-  closeMc();
   toast('Call '+c.id+' saved');
-  renderAll(); if (document.getElementById('drawer').classList.contains('on')) openCall(c.id);
+  renderAll(); openCall(c.id);          // show the saved call in the same panel
 }
 
 /* ================= Login (online only) =================
