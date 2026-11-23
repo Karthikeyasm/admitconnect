@@ -379,7 +379,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 17:00 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 17:20 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -569,7 +569,7 @@ const PLACE = ['Northfield','Sunrise','Lakeview','Greenvale','St. Aurora','River
 
 /* ---------------- Interface translations (draft – needs native review) ---------------- */
 const I18N = {
-  en:{today_progress:"Today's progress",domains:'Courses',admin:'Admin',analytics:'Data analytics',seats:'Seats & colleges',settings:'Settings',
+  en:{today_progress:"Today's progress",domains:'Courses',admin:'Admin',analytics:'Data analytics',seats:'Seats & colleges',settings:'Settings',logs:'Login logs',
       tab_today:"📅 Today's campaign",tab_log:'📋 Call log',tab_adm:'🎓 Admissions',tab_cand:'👥 Candidates',tab_msg:'💬 Messages',
       sb_title:"Today's scoreboard",sb_calls:'Calls today',sb_acc:'Accepted',sb_rej:'Rejected',sb_np:'Not picked',sb_eng:'Heard fully',sb_int:'Interested',sb_msg:'Msgs sent',sb_adm:'Admission rate',
       start:'▶ Start',pause:'⏸ Pause campaign',resume:'▶ Resume campaign',done:'✔ Campaign completed',upload:'⬆ Upload',
@@ -930,8 +930,8 @@ const openLv = {pu:true, ug:true, pg:true};   // which level groups are expanded
 function toggleLvl(l){ openLv[l]=!openLv[l]; renderSide(); }
 const charts = {};
 const TABS = [{id:'today',k:'tab_today'},{id:'log',k:'tab_log'},{id:'adm',k:'tab_adm'},{id:'cand',k:'tab_cand'},{id:'msg',k:'tab_msg'}];
-const ADMIN_VIEWS = [{id:'analytics',k:'analytics',ic:'📊'},{id:'seats',k:'seats',ic:'🏫'}];
-const PAGE_VIEWS = {analytics:{k:'analytics',ic:'📊'}, seats:{k:'seats',ic:'🏫'}, settings:{k:'settings',ic:'⚙'}, college:{k:'college_dash',ic:'🏫'}};
+const ADMIN_VIEWS = [{id:'analytics',k:'analytics',ic:'📊'},{id:'seats',k:'seats',ic:'🏫'},{id:'logs',k:'logs',ic:'🕒'}];
+const PAGE_VIEWS = {analytics:{k:'analytics',ic:'📊'}, seats:{k:'seats',ic:'🏫'}, logs:{k:'logs',ic:'🕒'}, settings:{k:'settings',ic:'⚙'}, college:{k:'college_dash',ic:'🏫'}};
 const logF = {status:'all', q:'', cf:{}, range:'all', from:iso(DAYS[0]), to:iso(TODAY), group:'recency'};
 let anaP = '14d';
 // Per-viewer conveniences (theme, profile) – kept in this browser only
@@ -1035,7 +1035,7 @@ function renderTop(){
 const collegeOptions = sel => LEVELS.map(l=>COURSES.filter(d=>d.lv===l.id).map(d=>`<optgroup label="${l.name.split(' (')[0]} · ${d.name}">${COLLEGE_LIST.filter(c=>c.domain===d.id).map(c=>`<option ${c.name===sel?'selected':''}>${c.name}</option>`).join('')}</optgroup>`).join('')).join('');
 function renderScore(){
   const av = PAGE_VIEWS[curView];
-  if (curView==='settings' || curView==='college'){ document.getElementById('score').innerHTML = `<span class="ptitle">${av.ic} ${T(av.k)}${curView==='college'?' · '+myCollege:''}</span>`; return; }
+  if (curView==='settings' || curView==='college' || curView==='logs'){ document.getElementById('score').innerHTML = `<span class="ptitle">${av.ic} ${T(av.k)}${curView==='college'?' · '+myCollege:''}</span>`; return; }
   const L = calls.filter(c=>daysAgo(c.date)===0 && inDom(c));
   const n = st => L.filter(c=>c.status===st).length;
   const D = domCalls();
@@ -1071,7 +1071,7 @@ function renderView(){
   v.innerHTML = '';
   try {
     ({today:renderToday, log:renderCallTable, adm:renderAdmissions, cand:renderCandidates, msg:renderMessages,
-      analytics:renderAnalytics, seats:renderSeats, settings:renderSettings, college:renderCollege})[curView](v);
+      analytics:renderAnalytics, seats:renderSeats, logs:renderLogs, settings:renderSettings, college:renderCollege})[curView](v);
   } catch(e){ console.error('[AdmitConnect] page failed', e);
     v.innerHTML = `<div class="card" style="color:#991b1b">This page could not be shown (${esc(e.message)}). Choose <b>All courses</b> in the left panel and try again, and please report this.</div>`; }
   if (curView==='settings' && isAdmin){ loadAccounts(); renderTransfer(); }
@@ -1738,12 +1738,7 @@ function renderSeats(v){
     <div class="card"><h3>Most seats left <small>· ${esc(scopeName)}</small></h3><div class="ch"><canvas id="c13"></canvas></div></div>
     <div class="card"><h3>Fee range – all courses <small>· ₹ L/yr</small></h3><div class="ch"><canvas id="c14"></canvas></div></div></div>
   </div>
-  <div class="filters" style="margin-top:4px"><select id="sst" onchange="fillSeatRows()"><option value="any">All statuses</option><option>Full</option><option>Almost full</option><option>Open</option></select>
-    <span class="muted" id="src"></span><span class="muted">· Click a college to see its seat chart</span></div>
-  <div class="tw fit"><table>
-    <thead><tr><th>College / Institute</th><th>Course</th><th>District</th><th>Total seats</th><th>Allotted to us</th><th>Filled by us</th><th>Remaining</th><th>Progress</th><th>Status</th><th>Fee / seat / yr</th><th>Value filled</th><th>This campaign</th></tr></thead>
-    <tbody id="srows"></tbody></table></div>`;
-  fillSeatRows();
+`;
   const grid = {grid:{color:'#eef0f5'}}, small = {font:{size:10}};
   // all-courses charts: the chosen course is highlighted, the rest faded
   const hl = (d,on,off) => (matchDom(d.id) ? on : off);
@@ -1781,7 +1776,7 @@ function openCollegePanel(dom){
   </div>`;
   const d = document.getElementById('drawer'); d.classList.remove('wide'); d.classList.add('mid'); d.classList.add('on'); document.getElementById('ov').classList.add('on'); d.scrollTop = 0; addGrip();
 }
-function fillSeatRows(){
+function fillSeatRows(){ if (!document.getElementById('sst')) return;
   let R = COLLEGE_LIST.map(seatRow);
   R = R.filter(r=>matchDom(r.domain) && (!colFilter || r.name===colFilter));
   const f = document.getElementById('sst').value; if (f!=='any') R = R.filter(r=>r.st===f);
@@ -1912,7 +1907,7 @@ function renderSettings(v){
   const inp = (k,l,ph)=>`<div><label>${l}${locked(k)?' <span class="muted">(managed by admin)</span>':''}</label><input value="${esc(profView()[k]||'')}" placeholder="${ph||''}" ${locked(k)?'disabled':`oninput="setProf('${k}',this.value)"`}></div>`;
   const who = sbMe ? `🟢 Logged in to the database as <b>${esc(sbMe.full_name)}</b> (${sbMe.role})` : profile.id==='DEMO' ? '🟡 Demo user – mock data only, not a database account' : '';
   const SECS = [['profile','👤','My profile',true,'Name, contact, language'],['appearance','🎨','Appearance',true,'Theme, text size, layout'],['message','✉','Message settings',role!=='college',isAdmin?'WhatsApp / SMS texts':'View the message texts'],
-['bot','🤖','Bot call settings',isAdmin,'Languages, hours, retries'],['users','👥','Users & roles',isAdmin,'Accounts, roles, calling mode'],
+['bot','🤖','Bot call settings',isAdmin,'Languages, hours, retries'],['users','👥','Users & roles',isAdmin,'Accounts, roles, calling mode'],['security','⏱','Security',isAdmin,'Auto log-off, login logs'],
     ['college','🏫','College details',true,isAdmin?'Fees, seats, location':'View college details'],['guide','📘','Guides',role!=='college','Call flow, keys, colours']].filter(x=>x[3]);
   if (!SECS.some(x=>x[0]===setSec)) setSec = 'profile';
   v.innerHTML = `<div class="setwrap"><nav class="setnav">${SECS.map(([id,ic,l,_,d])=>`<div class="${id===setSec?'on':''}" onclick="setSec='${id}';renderView()"><span class="sic">${ic}</span><span><b>${l}</b><small>${d}</small></span></div>`).join('')}</nav>
@@ -2019,7 +2014,8 @@ function renderSettings(v){
         <tr><td>🔗 / 💬</td><td>Message interest – replied SHOW ME (high), Send details (medium), Later (low), STOP (not interested)</td></tr>
       </tbody></table></div>`}
   </div>
-  <div>${collegeDetailsCard()}</div></div></div>`;
+  <div>${collegeDetailsCard()}</div>
+  ${isAdmin?`<div class="card" data-sec="security"><h3>⏱ Security</h3>${idleControl()}<div class="muted" style="font-size:12px;margin-top:10px">Every login and logout is recorded – see <a href="#" onclick="event.preventDefault();setView('logs')">Admin › Login logs</a>.</div></div>`:''}</div></div>`;
   // show only the chosen section
   v.querySelectorAll('[data-sec]').forEach(el=>{ el.style.display = el.dataset.sec===setSec ? '' : 'none'; });
 }
@@ -2599,7 +2595,7 @@ function demoSwitcher(compact){
   return `<div class="dsw${compact?' side':''}" onclick="event.stopPropagation()"><label>👁 ${compact?'Switch user (demo)':'Switch user to check their view (demo / admin only)'}</label>
     <select onchange="switchDemoUser(this.value)">${opts}</select></div>`;
 }
-function switchDemoUser(id){ curDom = 'all'; if (id==='ADM-001' || (demoUsers.find(u=>u.id===id)||{}).role==='admin') setRole('admin'); else viewAs(id); }
+function switchDemoUser(id){ curDom = 'all'; setTimeout(beginSess, 0); if (id==='ADM-001' || (demoUsers.find(u=>u.id===id)||{}).role==='admin') setRole('admin'); else viewAs(id); }
 function setDemoUser(id, k, v){ const u = demoUsers.find(x=>x.id===id); if (!u) return; u[k] = v; saveDemoUsers(); toast(u.name+' updated'); renderAll(); }
 function viewAs(id){ const u = demoUsers.find(x=>x.id===id); if (!u) return; curDom = 'all';
   if (u.role==='counsellor') setRole('counsellor:'+u.id); else { myCollege = u.college || myCollege; setRole('college'); } }
@@ -2659,6 +2655,68 @@ async function doLogin(){
     return;
   }
 }
+/* ================= Login logs & auto log-off =================
+   Demo: sessions are kept in this browser. Live system: the same records go to a "sessions" table in the database. */
+let sessions = (()=>{ try{ return JSON.parse(localStorage.getItem('ac_sessions'))||null; }catch(e){ return null; } })();
+const saveSessions = () => { try{ localStorage.setItem('ac_sessions', JSON.stringify(sessions.slice(-2000))); }catch(e){} };
+let idleMin = (()=>{ try{ return +(localStorage.getItem('ac_idleMin')||15); }catch(e){ return 15; } })();
+let curSess = null, lastAct = Date.now(), idleTimer = null;
+function seedSessions(){   // mock history for the last 14 days so the page is not empty
+  let h = 7; const rnd2 = () => (h = (h*9301+49297)%233280)/233280, out = [];
+  for (let d=13; d>=1; d--){ const day = new Date(); day.setDate(day.getDate()-d); if (day.getDay()===0) continue;
+    for (const u of demoUsers){ if (rnd2()<0.15) continue;
+      let t = new Date(day); t.setHours(9+Math.floor(rnd2()*2), Math.floor(rnd2()*60), 0, 0);
+      const n = 1+Math.floor(rnd2()*3);
+      for (let k=0;k<n;k++){ const len = (60+rnd2()*180)*60000, end = new Date(+t+len);
+        out.push({user:u.id, name:u.name, role:u.role, in:+t, out:+end, how: k===n-1 ? (rnd2()<0.3?'Auto log-off':'Logged out') : (rnd2()<0.5?'Auto log-off':'Logged out')});
+        t = new Date(+end + (20+rnd2()*60)*60000); if (t.getHours()>=19) break; } } }
+  return out;
+}
+if (!sessions){ sessions = seedSessions(); saveSessions(); }
+function sessUser(){ if (sbMe) return {id:sbMe.id, name:sbMe.full_name, role:sbMe.role};
+  const u = demoUsers.find(x=>x.id===curDemoId()) || {id:'ADM-001', name:profile.name||'Admin', role:'admin'}; return {id:u.id, name:u.name, role:u.role}; }
+function beginSess(){ endSess('Switched user', true); const u = sessUser(); curSess = {user:u.id, name:u.name, role:u.role, in:Date.now(), out:null, how:'Active now'}; sessions.push(curSess); saveSessions(); lastAct = Date.now(); startIdleWatch(); }
+function endSess(how, quiet){ if (!curSess) return; curSess.out = Date.now(); curSess.how = how; curSess = null; saveSessions(); }
+function startIdleWatch(){ clearInterval(idleTimer); idleTimer = setInterval(()=>{
+  if (!curSess || !idleMin) return; const left = idleMin*60000 - (Date.now()-lastAct);
+  if (left <= 0){ endSess('Auto log-off'); toast('Logged off after '+idleMin+' min without activity'); logout(true); }
+  else if (left < 60000 && !startIdleWatch.warned){ startIdleWatch.warned = true; toast('No activity – you will be logged off in 1 minute'); } }, 15000); }
+['mousemove','keydown','click','scroll','touchstart'].forEach(ev=>document.addEventListener(ev, ()=>{ lastAct = Date.now(); startIdleWatch.warned = false; }, {passive:true}));
+window.addEventListener('beforeunload', ()=>{ if (curSess){ curSess.out = Date.now(); curSess.how = 'Closed the page'; saveSessions(); } });
+function setIdleMin(v){ idleMin = +v; try{ localStorage.setItem('ac_idleMin', idleMin); }catch(e){} toast(idleMin ? 'Auto log-off after '+idleMin+' min of no activity' : 'Auto log-off turned off'); renderView(); }
+const fmtDur = ms => { const m = Math.round(ms/60000); return m<60 ? m+' min' : Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')+' m'; };
+const fmtTime = t => new Date(t).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+const fmtDay = t => new Date(t).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+let sessF = {user:'', days:'7', view:'daily'};
+function idleControl(){ return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b>⏱ Auto log-off</b><span class="muted" style="font-size:13px">Log users off automatically after no activity for</span>
+  <select style="width:auto" onchange="setIdleMin(this.value)">${[[5,'5 min'],[10,'10 min'],[15,'15 min'],[30,'30 min'],[60,'1 hour'],[0,'Never']].map(([v,l])=>`<option value="${v}" ${idleMin===v?'selected':''}>${l}</option>`).join('')}</select></div>`; }
+function renderLogs(v){
+  if (curSess){ curSess.out = null; }
+  const now = Date.now(), from = sessF.days==='all' ? 0 : now - (+sessF.days)*86400000;
+  const S = sessions.filter(x=>(!sessF.user || x.user===sessF.user) && x.in>=from).sort((a,b)=>b.in-a.in);
+  const dur = x => (x.out||now) - x.in;
+  // daily summary: one row per user per day
+  const byDay = {}; S.forEach(x=>{ const k = x.user+'|'+new Date(x.in).toDateString(); (byDay[k] = byDay[k]||[]).push(x); });
+  const daily = Object.values(byDay).map(L=>({user:L[0].user, name:L[0].name, role:L[0].role, day:L[0].in, first:Math.min(...L.map(x=>x.in)), last:L.some(x=>!x.out)?null:Math.max(...L.map(x=>x.out)), total:L.reduce((t,x)=>t+dur(x),0), n:L.length, auto:L.filter(x=>x.how==='Auto log-off').length}))
+               .sort((a,b)=>b.day-a.day || a.name.localeCompare(b.name));
+  const tot = {}; S.forEach(x=>{ tot[x.user] = tot[x.user] || {name:x.name, role:x.role, ms:0, days:new Set()}; tot[x.user].ms += dur(x); tot[x.user].days.add(new Date(x.in).toDateString()); });
+  const roleIc = r => r==='admin'?'🛡':r==='counsellor'?'🎧':'🏫';
+  const howPill = h => `<span class="pill" style="${h==='Active now'?'background:#dcfce7;color:#166534':h==='Auto log-off'?'background:#fef3c7;color:#92400e':h==='Closed the page'?'background:#f1f5f9;color:#475569':'background:#e0e7ff;color:#3730a3'}">${h}</span>`;
+  v.innerHTML = `
+  <div class="card" style="padding:12px 16px;margin-bottom:12px">${idleControl()}</div>
+  <div class="filters compact"><select onchange="sessF.user=this.value;renderView()"><option value="">👥 All users</option>${demoUsers.map(u=>`<option value="${u.id}" ${sessF.user===u.id?'selected':''}>${roleIc(u.role)} ${esc(u.name)}</option>`).join('')}</select>
+    <select onchange="sessF.days=this.value;renderView()">${[['1','Today'],['7','Last 7 days'],['14','Last 14 days'],['30','Last 30 days'],['all','All']].map(([k,l])=>`<option value="${k}" ${sessF.days===k?'selected':''}>📅 ${l}</option>`).join('')}</select>
+    <span class="chips">${[['daily','Per day'],['sessions','Every login']].map(([k,l])=>`<span class="chip ${sessF.view===k?'on':''}" onclick="sessF.view='${k}';renderView()">${l}</span>`).join('')}</span>
+    <span class="muted">${S.length} logins</span></div>
+  <div class="kpis">${Object.values(tot).map(t=>kpi(roleIc(t.role)+' '+t.name, fmtDur(t.ms), t.days.size+' day'+(t.days.size===1?'':'s')+' · avg '+fmtDur(t.ms/Math.max(1,t.days.size))+'/day')).join('') || '<div class="muted">No logins in this period.</div>'}</div>
+  <div class="tw fit"><table>${sessF.view==='daily' ? `
+    <thead><tr><th>Date</th><th>User</th><th>Role</th><th>First login</th><th>Last logout</th><th>Time logged in</th><th>Logins</th><th>Auto log-offs</th></tr></thead><tbody>
+    ${daily.map(r=>`<tr style="cursor:default"><td>${fmtDay(r.day)}</td><td><b>${esc(r.name)}</b></td><td>${roleIc(r.role)} ${r.role}</td><td>${fmtTime(r.first)}</td><td>${r.last?fmtTime(r.last):howPill('Active now')}</td><td><b>${fmtDur(r.total)}</b></td><td>${r.n}</td><td>${r.auto||'—'}</td></tr>`).join('')}` : `
+    <thead><tr><th>Date</th><th>User</th><th>Role</th><th>Logged in</th><th>Logged out</th><th>Duration</th><th>How it ended</th></tr></thead><tbody>
+    ${S.map(x=>`<tr style="cursor:default"><td>${fmtDay(x.in)}</td><td><b>${esc(x.name)}</b></td><td>${roleIc(x.role)} ${x.role}</td><td>${fmtTime(x.in)}</td><td>${x.out?fmtTime(x.out):'—'}</td><td>${fmtDur(dur(x))}</td><td>${howPill(x.how)}</td></tr>`).join('')}`}
+  </tbody></table></div>
+  <div class="muted" style="font-size:12px;margin-top:6px">Demo: login records are kept in this browser (past days are mock data). In the live system every login and logout is saved in the database for all users.</div>`;
+}
 function demoLogin(){ startSession({id:'DEMO', name:'Demo Admin', email:'demo@admitconnect.example', phone:'9800000000', role:'admin'}); }
 function startSession(u){
   profile = {...profile, name:u.name, email:u.email, phone:u.phone, id:u.id};
@@ -2667,13 +2725,15 @@ function startSession(u){
   document.getElementById('auth').classList.remove('on');
   if ((u.role||'counsellor')==='counsellor') actingC = u.id;
   setRole(u.role || 'counsellor', true);
+  beginSess();
   toast('Welcome, '+u.name.split(' ')[0]+'!');
 }
-async function logout(){
+async function logout(auto){
+  if (!auto) endSess('Logged out'); clearInterval(idleTimer);
   sbMe = null; clearInterval(pendTimer); pending = [];
   if (simTimer){ clearInterval(simTimer); simTimer=null; }
   if (sb){ try { await sb.auth.signOut(); } catch(e){ console.warn(e); } }
-  renderAuth('login', 'You have been logged out.');
+  renderAuth('login', auto ? 'You were logged off after '+idleMin+' minutes without activity.' : 'You have been logged out.');
 }
 async function checkSession(){
   if (!sb){ renderAuth('nonet'); return; }
