@@ -350,7 +350,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 14:00 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 14:10 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -1022,8 +1022,12 @@ function renderTabs(){
 function renderView(){
   Object.values(charts).forEach(c=>c.destroy()); for (const k in charts) delete charts[k];
   const v = document.getElementById('view');
-  ({today:renderToday, log:renderCallTable, adm:renderAdmissions, cand:renderCandidates, msg:renderMessages,
-    analytics:renderAnalytics, seats:renderSeats, settings:renderSettings, college:renderCollege})[curView](v);
+  v.innerHTML = '';
+  try {
+    ({today:renderToday, log:renderCallTable, adm:renderAdmissions, cand:renderCandidates, msg:renderMessages,
+      analytics:renderAnalytics, seats:renderSeats, settings:renderSettings, college:renderCollege})[curView](v);
+  } catch(e){ console.error('[AdmitConnect] page failed', e);
+    v.innerHTML = `<div class="card" style="color:#991b1b">This page could not be shown (${esc(e.message)}). Choose <b>All courses</b> in the left panel and try again, and please report this.</div>`; }
   if (curView==='settings' && isAdmin){ loadAccounts(); renderTransfer(); }
   fitTables();
 }
@@ -1586,9 +1590,6 @@ function renderAnalytics(v){
     <select onchange="anaP=this.value;renderView()">
     ${[['14d','Last 14 days'],['tm','This month (Nov)'],['lm','Last month (Oct)'],['all','All time']].map(o=>`<option value="${o[0]}" ${anaP===o[0]?'selected':''}>📅 ${o[1]}</option>`).join('')}</select>
     <span class="muted">${fmtD(PD[0])} – ${fmtD(PD[PD.length-1])} 2026</span>${COL?`<span class="muted">· calls for ${shortDom(COL.domain)}, admissions for ${esc(COL.name)}</span>`:''}</div>
-  <div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;margin-bottom:12px">
-    <b>📅 Day board</b><select onchange="anaDay=this.value;renderView()">${Array.from({length:14},(_,i)=>{ const d=new Date(TODAY); d.setDate(d.getDate()-i); return `<option value="${iso(d)}" ${iso(d)===bd?'selected':''}>${i===0?'Today · ':i===1?'Yesterday · ':''}${fmtD(d)}</option>`; }).join('')}</select>
-    <div class="sb" style="margin:0">${bit('Calls',BL.length,'#1c2333')}${bit('Accepted',bn('answered'),'#16a34a')}${bit('Rejected',bn('rejected'),'#dc2626')}${bit('Not picked',bn('not_picked'),'#ea580c')}${bit('Heard fully',BL.filter(c=>c.completed).length,'#4f46e5')}${bit('Interested',BL.filter(c=>c.lvl>=2).length,'#2563eb')}${bit('Msgs sent',msgs.filter(m=>iso(m.date)===bd && matchDom(m.domain) && (!COL||m.domain===COL.domain)).length,'#0891b2')}${bit('Joined',BL.filter(c=>c.admission==='Joined').length,'#7c3aed')}</div></div>
   <div class="grid2">
     <div class="card"><h3>Daily calls by outcome</h3><div class="ch"><canvas id="c1"></canvas></div></div>
     <div class="card"><h3>Daily success rate <small>· answered % and heard-fully %</small></h3><div class="ch"><canvas id="c2"></canvas></div></div></div>
@@ -1790,7 +1791,7 @@ function collegeDetailsCard(){
   if (role==='college') L = L.filter(x=>x.name===myCollege);
   const ed = (x,k,w,type='text') => isAd ? `<input ${type==='number'?'type="number" step="any"':''} style="width:${w}px;padding:4px 6px" value="${esc(String(x[k]??''))}" onchange="setColField('${esc(x.name).replace(/'/g,"\\'")}','${x.domain}','${k}',this.value)">` : esc(String(x[k]??'—'));
   return `<div class="card mini" data-sec="college"><h3>🏫 College details <small>· ${isAd?'you can edit (saved in this browser for the demo)':'read-only – set by the admin'}</small></h3>
-    <div class="muted" style="font-size:12px;margin-bottom:8px">${L.length} colleges${curDom!=='all'?' for '+shortDom(curDom.replace(/^[LG]:/,''))||'':''}. Choose a course in the left panel to narrow the list. Mock values until real data is uploaded (see the Excel template on Seats &amp; colleges).</div>
+    <div class="muted" style="font-size:12px;margin-bottom:8px">${L.length} colleges${curDom==='all'?'':' for '+(curDom.startsWith('L:')?LEVELS.find(l=>l.id===curDom.slice(2)).name:curDom.startsWith('G:')?GROUPS[curDom.slice(2)].full:domName(curDom))}. Choose a course in the left panel to narrow the list. Mock values until real data is uploaded (see the Excel template on Seats &amp; colleges).</div>
     <div style="max-height:60vh;overflow:auto"><table><thead><tr><th>College</th><th>Course</th><th>District</th><th>Area</th><th>Fee ₹ L/yr</th><th>Total seats</th><th>Our quota</th><th>Min score %</th></tr></thead><tbody>
     ${L.map(x=>`<tr style="cursor:default"><td><b>${esc(x.name)}</b></td><td>${shortDom(x.domain)}</td><td>${isAd?`<select style="padding:4px" onchange="setColField('${esc(x.name).replace(/'/g,"\\'")}','${x.domain}','district',this.value)">${KA_DISTRICTS.map(d=>`<option ${d===x.district?'selected':''}>${d}</option>`).join('')}</select>`:x.district}</td>
       <td>${ed(x,'area',110)}</td><td>${ed(x,'fee',70,'number')}</td><td>${ed(x,'total',70,'number')}</td><td>${ed(x,'quota',70,'number')}</td><td>${ed(x,'minScore',60,'number')}</td></tr>`).join('')}
