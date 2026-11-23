@@ -184,6 +184,8 @@ tr.grp:hover{background:none}
 .set.four{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .dgrip{position:sticky;top:0;float:left;width:7px;height:100vh;margin:0 -7px -100vh 0;cursor:ew-resize;z-index:5}.dgrip:hover,.dgrip.on{background:#6366f155}
 .drawer.dragging{transition:none}
+.boxrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.minibox{border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--bg)}.minibox label{margin-bottom:4px}
 .msec{border:1px solid var(--line);border-radius:10px;padding:0 14px;margin:0 0 10px;background:var(--card)}
 .msec>summary{cursor:pointer;font-weight:700;font-size:14.5px;padding:11px 0;list-style:none;display:flex;gap:6px;align-items:center}
 .msec>summary::-webkit-details-marker{display:none}.msec>summary:before{content:'▸';color:var(--muted);width:14px}.msec[open]>summary:before{content:'▾'}
@@ -377,7 +379,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 16:30 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 16:45 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -2064,25 +2066,29 @@ function openManual(qi, callId, candId){
   box.innerHTML = `<div class="mcwrap">
     <div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1">
       <div class="muted" style="font-size:12px">${c?cid(c)+' · Attempt #'+c.attempt:idChip('Queued','queued')+' · '+cand.id} · ${c&&!c.manual&&role==='admin'?'<span class="pill" style="background:#e0e7ff;color:#3730a3">🤖 Bot call · editing as admin</span>':'<span class="pill" style="background:#fef3c7;color:#92400e">✍ Manual call</span>'}</div>
-      <h2 style="margin:6px 0 2px;font-size:20px">${esc(cand.name)}</h2>
-      <div class="muted">${cand.masked} · ${cand.city} · ${domName(c?c.domain:cand.domain)} · Score <b>${cand.score}%</b></div></div>
+      <div style="display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap;margin-top:6px"><h2 style="margin:0;font-size:20px">${esc(cand.name)}</h2>
+      <span class="muted">${cand.masked} · ${cand.city} · ${domName(c?c.domain:cand.domain)} · Score <b>${cand.score}%</b></span></div></div>
       <button class="x" onclick="closeDrawer()">×</button></div>
-    <div class="muted" style="font-size:12px;margin:10px 0"><span class="rqd">*</span> = required before saving (for answered calls). Click a section heading to fold it.</div>
+    <div class="muted" style="font-size:12px;margin:6px 0 8px"><span class="rqd">*</span> = required for answered calls · click a section heading to fold it</div>
     <details class="msec" open><summary>📞 Call details</summary>
     <div class="set four" style="gap:10px">
-      <div style="grid-column:1/-1" id="fStatus"><label>Call status<span class="rqd">*</span></label>${rch('mStatus', Object.entries(STATUS).map(([k,o])=>[k,o.l]), v('status','answered'))}</div>
+      <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap" id="fStatus"><label style="margin:0">Call status<span class="rqd">*</span></label>${rch('mStatus', Object.entries(STATUS).map(([k,o])=>[k,o.l]), v('status','answered'))}</div>
       <div><label>Time of call<span class="rqd">*</span></label><input id="mTime" type="time" value="${v('time',tnow)}"></div>
       <div><label>Talk time (min)<span class="rqd">*</span> <span class="muted" style="font-weight:400">(if answered)</span></label><input id="mDur" type="number" min="0" step="0.5" value="${c&&c.dur?(c.dur/60).toFixed(1):''}" placeholder="e.g. 3"></div>
       <div><label>Language spoken<span class="rqd">*</span></label><select id="mLang"><option value="">— choose —</option>${opt(LANGS.map(l=>[l.n,l.n]), v('lang',cand.lang))}</select></div>
       <div><label>Interest level<span class="rqd">*</span></label><select id="mLvl">${opt([['','— choose —'],['3','High'],['2','Medium'],['1','Low'],['0','Not interested']], v('lvl',''))}</select></div>
 
-      <div style="grid-column:1/-1"><label>Candidate's message / query <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="mMsg" rows="2" placeholder="What did the student or parent say? e.g. wants colleges near home, fees under 1.5 L…">${c&&c.query?esc(c.query.text):''}</textarea></div>
-      <div style="grid-column:1/-1"><label>Reverted back <span class="muted" style="font-weight:400">(optional · empty = No)</span></label>${cbx('mRev', [['Call back','Call back'],['WhatsApp reply','WhatsApp'],['SMS reply','SMS']], c&&c.reverted?c.revertVia:'')}</div>
-      <div style="grid-column:1/-1"><label>Admission status <span class="muted" style="font-weight:400">(optional · empty = Not converted)</span></label>${cbx('mAdm', ['In process','Joined','Dropped'].map(a=>[a,a]), ['In process','Joined','Dropped'].includes(v('admission',''))?v('admission',''):'', "document.getElementById('mColW').style.display=document.getElementById('mAdm').value?'':'none'")}</div>
+      <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
+      <div><label>Candidate's message / query <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="mMsg" rows="2" placeholder="What did the student or parent say? e.g. wants colleges near home, fees under 1.5 L…">${c&&c.query?esc(c.query.text):''}</textarea></div>
+      <div><label>Counsellor notes <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="mNotes" rows="2" placeholder="Next step, call-back time…">${c?esc(c.notes||''):''}</textarea></div>
+      </div>
+      <div style="grid-column:1/-1" class="boxrow">
+      <div class="minibox"><label>Reverted back <span class="muted" style="font-weight:400">(optional · empty = No)</span></label>${cbx('mRev', [['Call back','Call back'],['WhatsApp reply','WhatsApp'],['SMS reply','SMS']], c&&c.reverted?c.revertVia:'')}</div>
+      <div class="minibox"><label>Admission status <span class="muted" style="font-weight:400">(optional · empty = Not converted)</span></label>${cbx('mAdm', ['In process','Joined','Dropped'].map(a=>[a,a]), ['In process','Joined','Dropped'].includes(v('admission',''))?v('admission',''):'', "document.getElementById('mColW').style.display=document.getElementById('mAdm').value?'':'none'")}</div>
+      </div>
       <div id="mColW" style="grid-column:1/-1;${['Joined','In process','Dropped'].includes(v('admission',''))?'':'display:none'}"><label>College</label><select id="mCol" onchange="mcCtx.college=this.value"></select></div>
-      <div style="grid-column:1/-1"><label>Counsellor notes <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="mNotes" rows="2" placeholder="Next step, call-back time…">${c?esc(c.notes||''):''}</textarea></div>
     </div></details>
-    <details class="msec" open><summary>📍 Location the student wants</summary><div class="set" style="gap:10px">
+    <details class="msec" open><summary>📍 Location the student wants</summary><div class="set four" style="gap:10px">
       <div><label>Preferred district (Karnataka)<span class="rqd">*</span></label><select id="mDist" onchange="mcCtx.dist=this.value==='Any'?'':this.value;mcCtx.anyDist=this.value==='Any';mcCtx.area='';renderArea();renderColleges()"><option value="">— choose —</option><option value="Any" ${c&&c.locality&&c.locality.district==='Any district'?'selected':''}>Any district (no preference)</option>${KA_DISTRICTS.map(d=>`<option ${c&&c.locality&&c.locality.district===d?'selected':''}>${d}</option>`).join('')}</select></div>
       <div><label>Area <span class="muted" style="font-weight:400">(optional)</span></label><select id="mArea" onchange="mcCtx.area=this.value;renderColleges()"></select></div>
       <div><label>or PIN code <span class="muted" style="font-weight:400">(optional)</span></label><input id="mPin" inputmode="numeric" maxlength="6" placeholder="e.g. 560034" value="${c&&c.locality?esc(c.locality.pin||''):''}" oninput="onPin(this.value)"></div>
@@ -2176,17 +2182,13 @@ function renderColleges(){
       ${sel('sort',[...(mcCtx.area?[['near','📍 Nearest first']]:[]),['rec','⭐ Recommended first'],['fee','Lowest fee'],['seats','Most seats left']])}
       ${mcCtx.area?sel('km',[['','Any distance'],['1','Within 1 km'],['2','Within 2 km'],['5','Within 5 km'],['10','Within 10 km']]):''}
       ${tick('fit','Fits score ('+score+'%)')} ${tick('open','Seats open')}</div>${distNote}${summary}
-    ${rows.length?`<div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:0 0 8px;padding:7px 10px;border-radius:8px;background:${byKm?'#ecfdf5;color:#065f46':'#fff7ed;color:#9a3412'}">
-      <span style="flex:none;width:18px;height:18px;border-radius:50%;background:currentColor;display:inline-flex;align-items:center;justify-content:center"><b style="color:#fff;font:700 12px Georgia,serif">i</b></span>
-      <span>${byKm?'Colleges are listed <b>nearest to farthest</b> from <b>'+esc(mcCtx.area)+'</b> (straight-line distance shown on each college).'
-        :'Listed by '+(f.sort==='fee'?'<b>lowest fee</b>':f.sort==='seats'?'<b>most seats left</b>':'<b>best fit</b> (score, seats, fee)')+'. To list <b>nearest to farthest</b>, choose <b>Bengaluru Urban</b> and an <b>area</b>, or type a <b>PIN code</b>.'}</span></div>`:''}
     <div style="max-height:52vh;overflow:auto">${rows.length ? rows.map(r=>`
       <div class="colrow${mcCtx.sug.has(r.name)?' sug':''}${r.fits?'':' dim'}">
         <input type="checkbox" title="Suggested to the candidate" style="width:16px;height:16px;margin:0" ${mcCtx.sug.has(r.name)?'checked':''} onchange="this.checked?mcCtx.sug.add(this.dataset.n):mcCtx.sug.delete(this.dataset.n);renderColleges();renderCourseBox(true)" data-n="${esc(r.name)}">
         <div><b>${rec.has(r.name)?'⭐ ':''}${esc(r.name)}</b><div class="muted" style="font-size:12px">📍 ${r.area?esc(r.area)+', ':''}${r.district} · ${shortDom(r.domain)} · Min score ${r.minScore}%${r.fits?'':' <span style="color:#dc2626">(above candidate)</span>'}</div></div>
         <div style="text-align:right">${r.km!=null&&mcCtx.area?`<div style="font-size:12px;color:#2563eb;font-weight:600">📍 ${fmtKm(r.km)}</div>`:''}<b>₹${r.fee.toFixed(2)} L</b><span class="muted">/yr</span><div><span class="pill" style="color:${SEAT_ST[r.st].c};background:${SEAT_ST[r.st].bg}">${r.rem} seats · ${r.st}</span></div></div>
       </div>`).join('') : '<div class="muted" style="font-size:13px">No college matches these filters. Try a higher fee limit or untick "Fits score".</div>'}</div>
-    <div class="muted" style="font-size:12px;margin-top:6px">⭐ = best fit (score fits, seats open, lower fee). Tick a college to mark it as <b>suggested</b> to the candidate – it is saved with the call and listed first under Admission › College. Fees, seats, minimum scores, college locations and distances are mock values.</div>`;
+    <div class="muted" style="font-size:12px;margin-top:6px">Tick a college to mark it <b>suggested</b> (saved with the call). Mock fees, seats and locations.</div>`;
 }
 function mcCourses(){   // courses shown for the chosen level / stream
   return COURSES.filter(d=>d.lv===mcCtx.lv && (mcCtx.lv!=='pu' || (mcCtx.stream==='sci' ? d.grp==='pu_sci' : !d.grp)));
