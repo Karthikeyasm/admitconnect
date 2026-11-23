@@ -192,7 +192,7 @@ tr.grp:hover{background:none}
 .msec[open]{padding-bottom:12px}
 .msec #mcRight{border:0;padding:0}
 .drawer.mid{width:min(var(--dw,1080px),calc(100vw - 70px))}
-.drawer .cin td{white-space:nowrap}.drawer .cin td:nth-child(-n+2){white-space:normal}.drawer .cin td,.drawer .cin th{padding:6px 7px!important}
+.drawer .cin td{white-space:nowrap}.drawer .cin td:first-child{white-space:normal;min-width:200px}.drawer .cin td,.drawer .cin th{padding:6px 7px!important}
 .drawer .mcwrap{padding:18px 22px}
 .dh{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:10px}
 .dh h2{margin:0;font-size:18px}
@@ -297,6 +297,7 @@ textarea,.db select{width:100%;padding:9px;border:1px solid var(--line);border-r
 .seatgrid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:14px;align-items:start;margin-bottom:14px}
 @media(max-width:1250px){.seatgrid{grid-template-columns:1fr}}
 .seatright{position:sticky;top:8px}
+.minich.three{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
 .minich.two{grid-template-columns:repeat(2,minmax(0,1fr))}
 .clist tr.cexp>td{background:var(--card)!important;padding:4px 10px 10px 34px!important;cursor:default}
 .cin{width:100%;font-size:12.5px;border:1px solid var(--line);border-radius:8px}.cin th{background:var(--bg);font-size:11.5px}.cin td,.cin th{padding:5px 8px!important}.cin tbody tr{cursor:pointer}.cin tbody tr:hover td{background:var(--brand2)}
@@ -379,7 +380,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 17:20 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 17:35 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -1732,43 +1733,51 @@ function renderSeats(v){
     <b style="font-size:15px">Showing: ${esc(scopeName)}</b><span class="muted">· ${sel.length} colleges · <b>${sum(sel,'rem')}</b> of ${sum(sel,'quota')} our seats left · ${lakh(sel.reduce((s,r)=>s+r.filled*r.fee,0))} filled value</span>
     ${curDom!=='all'||colFilter?`<button class="btn" style="padding:4px 10px" onclick="colFilter='';setDom('all')">↺ Show all courses</button>`:''}
     ${colFilter?`<span class="pill" style="background:#eef2ff;color:#3730a3">🏫 ${esc(colFilter)}</span>`:''}</div>
-  <div class="minich">
-    <div class="card"><h3>Our seats – all courses <small>· filled / left</small></h3><div class="ch"><canvas id="c7"></canvas></div></div>
+  <div class="minich three">
+    <div class="card"><h3>Our seats <small>· ${esc(scopeName)} · filled / left</small></h3><div class="ch"><canvas id="c7"></canvas></div></div>
     <div class="card"><h3>College status <small>· ${esc(scopeName)}</small></h3><div class="ch"><canvas id="c12"></canvas></div></div>
-    <div class="card"><h3>Most seats left <small>· ${esc(scopeName)}</small></h3><div class="ch"><canvas id="c13"></canvas></div></div>
-    <div class="card"><h3>Fee range – all courses <small>· ₹ L/yr</small></h3><div class="ch"><canvas id="c14"></canvas></div></div></div>
+    <div class="card"><h3>Fee range <small>· ${esc(scopeName)} · ₹ L/yr</small></h3><div class="ch"><canvas id="c14"></canvas></div></div></div>
+  <details class="msec" open style="margin-top:2px"><summary>🏆 Suggestions – most seats left for us <span class="muted" style="font-weight:400">· ${esc(scopeName)} · top 8</span></summary>
+    <table class="cin"><thead><tr><th>College</th><th>Course</th><th>Our seats left</th><th>Status</th><th>Fee / yr</th></tr></thead><tbody>
+    ${[...sel].filter(r=>r.rem>0).sort((a,b)=>b.rem-a.rem).slice(0,8).map(r=>`<tr onclick="openSeat('${r.name.replace(/'/g,"\\'")}')"><td><b>${esc(r.name)}</b><div class="muted" style="font-size:11.5px">📍 ${r.area?esc(r.area)+', ':''}${r.district||'—'}</div></td><td>${shortDom(r.domain)}</td><td><b>${r.rem}</b> <span class="muted">of ${r.quota}</span></td><td><span class="pill" style="color:${SEAT_ST[r.st].c};background:${SEAT_ST[r.st].bg}">${r.st}</span></td><td>${lakh(r.fee)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No open seats in this selection.</td></tr>'}
+    </tbody></table></details>
   </div>
 `;
   const grid = {grid:{color:'#eef0f5'}}, small = {font:{size:10}};
   // all-courses charts: the chosen course is highlighted, the rest faded
-  const hl = (d,on,off) => (matchDom(d.id) ? on : off);
-  charts.c7 = new Chart(c7,{type:'bar',data:{labels:COURSES.map(d=>d.name.replace('State Board + ','SB+')),datasets:[
-    {label:'Filled by us',data:COURSES.map(d=>sum(rows.filter(r=>r.domain===d.id),'filled')),backgroundColor:COURSES.map(d=>hl(d,'#4f46e5','#c7c9d9')),borderRadius:2},
-    {label:'Left',data:COURSES.map(d=>sum(rows.filter(r=>r.domain===d.id),'rem')),backgroundColor:COURSES.map(d=>hl(d,'#a5b4fc','#e8e9f0')),borderRadius:2}]},
-    options:{maintainAspectRatio:false,onClick:(e,el)=>{ if(el.length) setDom(COURSES[el[0].index].id); },scales:{x:{stacked:true,grid:{display:false},ticks:{...small,maxRotation:60,minRotation:45}},y:{stacked:true,...grid,ticks:small}},plugins:{legend:{display:false}}}});
+  const hl = (d,on,off) => on;   // charts show only the selected course(s)
+  const CS = COURSES.filter(d=>matchDom(d.id)), lab = d => d.name.replace('State Board + ','SB+');
+  charts.c7 = new Chart(c7,{type:'bar',data:{labels:CS.map(lab),datasets:[
+    {label:'Filled by us',data:CS.map(d=>sum(sel.filter(r=>r.domain===d.id),'filled')),backgroundColor:'#4f46e5',borderRadius:2,maxBarThickness:60},
+    {label:'Left',data:CS.map(d=>sum(sel.filter(r=>r.domain===d.id),'rem')),backgroundColor:'#a5b4fc',borderRadius:2,maxBarThickness:60}]},
+    options:{maintainAspectRatio:false,onClick:(e,el)=>{ if(el.length) setDom(CS[el[0].index].id); },scales:{x:{stacked:true,grid:{display:false},ticks:{...small,maxRotation:60,minRotation:45}},y:{stacked:true,...grid,ticks:small}},plugins:{legend:{display:false}}}});
   const stN = k => sel.filter(r=>r.st===k).length;
   charts.c12 = new Chart(c12,{type:'doughnut',data:{labels:['Open','Almost full','Full'],datasets:[{data:[stN('Open'),stN('Almost full'),stN('Full')],backgroundColor:[SEAT_ST['Open'].c,SEAT_ST['Almost full'].c,SEAT_ST['Full'].c]}]},
     options:{maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:11}}}}}});
-  const top = [...sel].sort((a,b)=>b.rem-a.rem).slice(0,6);
-  charts.c13 = new Chart(c13,{type:'bar',data:{labels:top.map(r=>r.name.length>20?r.name.slice(0,19)+'…':r.name),datasets:[{label:'Seats left',data:top.map(r=>r.rem),backgroundColor:top.map(r=>SEAT_ST[r.st].c),borderRadius:2}]},
-    options:{indexAxis:'y',maintainAspectRatio:false,onClick:(e,el)=>{ if(el.length) openSeat(top[el[0].index].name); },plugins:{legend:{display:false}},scales:{x:{...grid,ticks:small},y:{grid:{display:false},ticks:small}}}});
-  const fr = COURSES.map(d=>{ const F=rows.filter(r=>r.domain===d.id).map(r=>r.fee); return F.length?[Math.min(...F),Math.max(...F)]:null; });
-  charts.c14 = new Chart(c14,{type:'bar',data:{labels:COURSES.map(d=>d.name.replace('State Board + ','SB+')),datasets:[{label:'Fee range',data:fr,backgroundColor:COURSES.map(d=>hl(d,'#818cf8','#dcdcea')),borderRadius:3,borderSkipped:false}]},
-    options:{maintainAspectRatio:false,onClick:(e,el)=>{ if(el.length) setDom(COURSES[el[0].index].id); },plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>i.raw?'₹'+i.raw[0].toFixed(2)+' L – ₹'+i.raw[1].toFixed(2)+' L':''}}},scales:{x:{grid:{display:false},ticks:{...small,maxRotation:60,minRotation:45}},y:{...grid,ticks:small}}}});
+  const fr = CS.map(d=>{ const F=sel.filter(r=>r.domain===d.id).map(r=>r.fee); return F.length?[Math.min(...F),Math.max(...F)]:null; });
+  charts.c14 = new Chart(c14,{type:'bar',data:{labels:CS.map(lab),datasets:[{label:'Fee range',data:fr,backgroundColor:'#818cf8',maxBarThickness:60,borderRadius:3,borderSkipped:false}]},
+    options:{maintainAspectRatio:false,onClick:(e,el)=>{ if(el.length) setDom(CS[el[0].index].id); },plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>i.raw?'₹'+i.raw[0].toFixed(2)+' L – ₹'+i.raw[1].toFixed(2)+' L':''}}},scales:{x:{grid:{display:false},ticks:{...small,maxRotation:60,minRotation:45}},y:{...grid,ticks:small}}}});
   makeCollapsible(v);
 }
 // Slide-in panel (from the right) with all colleges of one course
+let cpSort = 'rem_d';
+const CP_SORTS = [['name_a','College name A–Z'],['loc_a','Location A–Z'],['rem_d','Our seats left: most first'],['rem_a','Our seats left: fewest first'],['p_d','Progress: highest first'],['p_a','Progress: lowest first'],
+  ['st_open','Status: open first'],['st_full','Status: full first'],['fee_a','Fee: lowest first'],['fee_d','Fee: highest first'],['j_d','This campaign: most joined first'],['j_a','This campaign: fewest joined first']];
 function openCollegePanel(dom){
-  const R = COLLEGE_LIST.filter(x=>x.domain===dom).map(seatRow).sort((a,b)=>b.rem-a.rem);
+  const stO = {'Open':0,'Almost full':1,'Full':2}, loc = r => (r.area?r.area+', ':'')+(r.district||'');
+  const cmp = {name_a:(a,b)=>a.name.localeCompare(b.name), loc_a:(a,b)=>loc(a).localeCompare(loc(b)), rem_d:(a,b)=>b.rem-a.rem, rem_a:(a,b)=>a.rem-b.rem, p_d:(a,b)=>b.p-a.p, p_a:(a,b)=>a.p-b.p,
+    st_open:(a,b)=>stO[a.st]-stO[b.st], st_full:(a,b)=>stO[b.st]-stO[a.st], fee_a:(a,b)=>a.fee-b.fee, fee_d:(a,b)=>b.fee-a.fee, j_d:(a,b)=>b.joins-a.joins, j_a:(a,b)=>a.joins-b.joins}[cpSort];
+  const R = COLLEGE_LIST.filter(x=>x.domain===dom).map(seatRow).sort(cmp);
   const sum = f => R.reduce((t,x)=>t+x[f],0);
   document.getElementById('drawer').innerHTML = `
   <div class="dh"><div><div class="muted" style="font-size:12px">${LEVELS.find(l=>l.id===levelOf(dom)).name}</div><h2 style="margin-top:4px">🏫 ${domName(dom)}</h2>
     <div class="muted">${R.length} colleges · <b>${sum('rem')}</b> of ${sum('quota')} our seats left · ${COURSE_DB[dom].updated?COURSE_DB[dom].recs+' students in the list':'no candidate list yet'}</div></div>
     <div style="display:flex;gap:6px;align-items:flex-start"><button class="btn" style="padding:5px 10px;font-size:13px" onclick="openUpload('${dom}')">⬆ Upload list</button><button class="x" onclick="closeDrawer()">×</button></div></div>
   <div class="db">
-    <div style="overflow-x:auto"><table class="cin"><thead><tr><th>College</th><th>Location</th><th>Total seats</th><th>Our seats left</th><th>Progress</th><th>Status</th><th>Fee / yr</th><th>Min score</th><th>This campaign</th></tr></thead><tbody>
-    ${R.map(r=>`<tr onclick="openSeat('${r.name.replace(/'/g,"\\'")}')" title="Open the seat chart"><td><b>${esc(r.name)}</b></td><td class="muted">${r.area?esc(r.area)+', ':''}${r.district||'—'}</td><td>${r.total}</td>
-      <td><b>${r.rem}</b> <span class="muted">of ${r.quota}</span></td><td style="white-space:nowrap"><span class="bar" style="width:70px"><i style="width:${r.p}%;background:${SEAT_ST[r.st].c}"></i></span> ${r.p}%</td>
+    <div style="display:flex;align-items:center;gap:8px;margin:0 0 8px"><span class="muted" style="font-size:13px">↕ Sort by</span><select style="width:auto" onchange="cpSort=this.value;openCollegePanel('${dom}')">${CP_SORTS.map(([k,l])=>`<option value="${k}" ${cpSort===k?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div style="overflow-x:auto"><table class="cin"><thead><tr><th>College</th><th>Total seats</th><th>Our seats left</th><th>Progress</th><th>Status</th><th>Fee / yr</th><th>Min score</th><th>This campaign</th></tr></thead><tbody>
+    ${R.map(r=>`<tr onclick="openSeat('${r.name.replace(/'/g,"\\'")}')" title="Open the seat chart"><td><b>${esc(r.name)}</b><div class="muted" style="font-size:11.5px">📍 ${r.area?esc(r.area)+', ':''}${r.district||'—'}</div></td><td>${r.total}</td>
+      <td><b>${r.rem}</b> <span class="muted">of ${r.quota}</span></td><td style="white-space:nowrap"><span class="bar" style="width:40px"><i style="width:${r.p}%;background:${SEAT_ST[r.st].c}"></i></span> ${r.p}%</td>
       <td><span class="pill" style="color:${SEAT_ST[r.st].c};background:${SEAT_ST[r.st].bg}">${r.st}</span></td><td>${lakh(r.fee)}</td><td>${r.minScore}%</td>
       <td>${r.joins?`<b style="color:#16a34a">+${r.joins} joined</b>`:'<span class="muted">—</span>'}</td></tr>`).join('')}
     </tbody></table></div>
