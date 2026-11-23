@@ -336,6 +336,7 @@ body[data-fs=large] .app{zoom:1.12}body[data-fs=small] .app{zoom:.9}
 body[data-dense=compact] td,body[data-dense=compact] th{padding-top:4px!important;padding-bottom:4px!important}
 body[data-stripe=on] tbody tr:nth-child(even) td{background:rgba(99,102,241,.05)}
 .utable select{padding:4px 6px}
+.lvt{display:inline-flex;gap:10px}.lvt label{display:inline-flex;gap:4px;align-items:center;font-size:12.5px;width:auto;margin:0;color:inherit;font-weight:500;cursor:pointer}.lvt input{width:15px;height:15px;margin:0}
 @media(max-width:1500px){.setwrap{grid-template-columns:230px 1fr}.setnav small{display:none}.utable th,.utable td{padding:6px 6px!important}}.utable td{white-space:nowrap}
 @media(max-width:800px){.setwrap{grid-template-columns:1fr}.setnav{position:static;display:flex;flex-wrap:wrap}}
 .sgrid>div>.card{margin-bottom:16px}
@@ -366,7 +367,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 15:10 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 15:25 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -589,7 +590,9 @@ const domName = id => { if (id.startsWith('L:')) return levelName(id.slice(2)); 
 const shortDom = id => id.startsWith('L:') ? levelName(id.slice(2)).split(' (')[0] : id.startsWith('G:') ? GROUPS[id.slice(2)].full : DOMAINS.find(d=>d.id===id).short;
 // Does a course id fall inside the current sidebar selection (all / a level / one course)?
 const groupOf_ = id => (DOMAINS.find(d=>d.id===id)||{}).grp;
-const matchDom = id => curDom==='all' || id===curDom || (curDom.startsWith('L:') && levelOf(id)===curDom.slice(2)) || (curDom.startsWith('G:') && groupOf_(id)===curDom.slice(2));
+const matchDom = id => lvAllowed(levelOf(id)) && (curDom==='all' || id===curDom || (curDom.startsWith('L:') && levelOf(id)===curDom.slice(2)) || (curDom.startsWith('G:') && groupOf_(id)===curDom.slice(2)));
+// Counsellors only see the levels the admin gave them (Users & roles › Calls for)
+function lvAllowed(lv){ try { return role!=='counsellor' || myLevels().includes(lv); } catch(e){ return true; } }
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none',2600); }
 
 /* ---------------- Calendar: 1 Oct → today ---------------- */
@@ -878,6 +881,14 @@ let demoUsers = (()=>{ try{ return JSON.parse(localStorage.getItem('ac_demoUsers
   {id:'CN-015',  name:'Rohit',      email:'rohit@admitconnect.example',  phone:'9000000015', role:'counsellor', active:true},
   {id:'CP-001',  name:'College office', email:'office@college.example', phone:'9000000101', role:'college', college:null, active:true}];
 const saveDemoUsers = () => store.set('demoUsers', demoUsers);
+const ALL_LV = ['pu','ug','pg'];
+const levelsOf = id => { const u = demoUsers.find(x=>x.id===id); return (u && u.levels && u.levels.length) ? u.levels : ALL_LV; };
+const myLevels = () => role==='counsellor' ? levelsOf(actingC) : ALL_LV;
+const lvShort = ls => ls.length===3 ? 'All levels' : ls.map(l=>({pu:'PU',ug:'Degree',pg:'Masters'})[l]).join(' + ');
+function toggleUserLevel(id, lv, on){ const u = demoUsers.find(x=>x.id===id); if (!u) return;
+  const cur = new Set(levelsOf(id)); on ? cur.add(lv) : cur.delete(lv);
+  if (!cur.size){ toast('Keep at least one level ticked'); renderView(); return; }
+  u.levels = ALL_LV.filter(l=>cur.has(l)); saveDemoUsers(); toast(u.name+' calls for: '+lvShort(u.levels)); renderAll(); }
 let callModes = {'CN-014':'auto', 'CN-015':'manual'};   // loaded from browser storage at start-up
 let defaultMode = 'auto';
 let actingC = 'CN-014';                      // counsellor currently being viewed / logged in
@@ -948,7 +959,7 @@ function setView(v){ if (v!==curView) fpOpen=false; curView=v; if (!(v in PAGE_V
 function setLang(l){ lang=l; renderAll(); }
 
 function todayStats(filterDom){
-  const Q = filterDom && curDom!=='all' ? todayQ.filter(q=>matchDom(q.call?q.call.domain:q.cand.domain)) : todayQ;
+  const Q = (filterDom && curDom!=='all') || role==='counsellor' ? todayQ.filter(q=>matchDom(q.call?q.call.domain:q.cand.domain)) : todayQ;
   const done = Q.filter(q=>q.state==='done');
   return {Q, total:Q.length, done:done.length, calling:Q.find(q=>q.state==='calling'), queued:Q.filter(q=>q.state==='queued').length};
 }
@@ -958,7 +969,7 @@ function renderSide(){
   const navItem = (v,ic,label)=>`<div class="dom ${curView===v?'active':''}" title="${label}" onclick="setView('${v}')"><span class="ic">${ic}</span>${label}</div>`;
   document.getElementById('commonNav').innerHTML = `<div class="admbox">${isCol?navItem('college','🏫',T('college_dash')):''}${navItem('settings','⚙',T('settings'))}</div>`;
   const roleLbl = T(ROLES.find(r=>r[0]===role)[1]);
-  document.getElementById('who').innerHTML = `<div class="who" style="cursor:pointer" title="Login details – open My profile" onclick="if(!event.target.closest('.logout')){setSec='profile';setView('settings')}">👤 <b>${role==='counsellor'&&MOCK_COUNSELLORS.some(c=>c.id===actingC)?cName(actingC)+' (preview)':profile.name||'Your name'}</b>${roleLbl}${role==='counsellor'?' · '+MODE_LBL[modeOf(actingC)]:role==='admin'?' · 🤖+✍ both modes':''}${isCol?' · '+myCollege:' · '+profile.id}
+  document.getElementById('who').innerHTML = `<div class="who" style="cursor:pointer" title="Login details – open My profile" onclick="if(!event.target.closest('.logout')){setSec='profile';setView('settings')}">👤 <b>${role==='counsellor'&&MOCK_COUNSELLORS.some(c=>c.id===actingC)?cName(actingC)+' (preview)':profile.name||'Your name'}</b>${roleLbl}${role==='counsellor'?' · '+MODE_LBL[modeOf(actingC)]+' · '+lvShort(myLevels()):role==='admin'?' · 🤖+✍ both modes':''}${isCol?' · '+myCollege:' · '+profile.id}
     ${profile.email?`<div style="font-size:11px;margin-top:2px">${profile.email}</div>`:''}<button class="logout" onclick="logout()" title="Log out">⎋ Log out</button></div>${demoSwitcher(true)}`;
   if (isCol){ document.getElementById('adminNav').innerHTML=''; return; }
   document.getElementById('secDom').textContent = T('domains');
@@ -967,8 +978,8 @@ function renderSide(){
   const noSub = true;   // left panel shows only the levels (course is chosen inside pages / the call form)
   const cnt = f => candidates.filter(f).length;
   document.getElementById('domains').innerHTML =
-    `<div class="dom ${act('all')}" title="All courses" onclick="sideDom('all')"><span class="ic">◎</span>All courses<span class="ct">${candidates.length}</span></div>` +
-    LEVELS.map(l=>`<div class="dom lvlh ${act('L:'+l.id)}" title="${l.name}" onclick="sideDom('L:${l.id}')">
+    `<div class="dom ${act('all')}" title="All courses" onclick="sideDom('all')"><span class="ic">◎</span>${myLevels().length===3?'All courses':'My courses'}<span class="ct">${candidates.filter(c=>lvAllowed(levelOf(c.domain))).length}</span></div>` +
+    LEVELS.filter(l=>lvAllowed(l.id)).map(l=>`<div class="dom lvlh ${act('L:'+l.id)}" title="${l.name}" onclick="sideDom('L:${l.id}')">
         ${noSub?'':`<span class="car" onclick="event.stopPropagation();toggleLvl('${l.id}')">${openLv[l.id]?'▾':'▸'}</span>`}<span class="ic">${l.ic}</span><b>${l.name}</b>
         <span class="ct">${cnt(c=>levelOf(c.domain)===l.id)}</span></div>` +
       (openLv[l.id] && !noSub ? (()=>{ let seen={}; return COURSES.filter(d=>d.lv===l.id).map(d=>{
@@ -1117,8 +1128,8 @@ function renderToday(v){
     .map(([k,l,col])=>`<span class="chip ${S.status===k?'on':''}" onclick="todayS.status='${k}';renderView()">${col?`<span class="dot" style="background:${col}"></span>`:''}${l}<b>${counts(k)}</b></span>`).join('');
   const rows = S.status==='all' ? F : F.filter(q=>stOf(q)===S.status);
   const modeLine = role==='admin' ? `<b>📞 Calling mode: 🤖 Automatic + ✍ Manual</b> – press ▶ Start to run the bot, or 📞 Log call next to a student to log a call by hand. Counsellors: ${counsellors().map(c=>`${esc(c.name)} ${modeOf(c.id)==='auto'?'🤖':'✍'}`).join(' · ')}`
-    : modeOf(actingC)==='auto' ? `<b>📞 Your calling mode: 🤖 Automatic</b> – press ▶ Start; the bot calls the students one by one and records everything.`
-    : `<b>📞 Your calling mode: ✍ Manual</b> – call from your phone, then press 📞 Log call next to the student to record the result.`;
+    : (modeOf(actingC)==='auto' ? `<b>📞 Your calling mode: 🤖 Automatic</b> – press ▶ Start; the bot calls the students one by one and records everything.`
+    : `<b>📞 Your calling mode: ✍ Manual</b> – call from your phone, then press 📞 Log call next to the student to record the result.`) + ` <span style="margin-left:6px">🎓 You call for: <b>${lvShort(myLevels())}</b></span>`;
   v.innerHTML = `
   <div class="modeline">${modeLine}</div>
   <div class="crow tight">
@@ -2423,6 +2434,7 @@ function openAddUser(){
       <div id="aColW" style="grid-column:1/-1;display:none"><label>College</label><select id="aCol">${collegeOptions(myCollege)}</select></div>
       <div><label>Employee ID (optional)</label><input id="aEmp" placeholder="e.g. CN-021"></div>
       <div><label>Calling mode (counsellors)</label><select id="aMode"><option value="auto">🤖 Automatic</option><option value="manual">✍ Manual</option></select></div>
+      <div style="grid-column:1/-1"><label>Calls for (counsellors)</label><span class="lvt">${LEVELS.map(l=>`<label><input type="checkbox" class="aLv" value="${l.id}" checked> ${l.name}</label>`).join('')}</span></div>
     </div>
     <div class="aerr" id="aErr"></div><div id="aOut"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" onclick="document.getElementById('mcModal').classList.remove('on')">Close</button><button class="btn pri" id="aBtn" onclick="addUser()">Create account &amp; send invite</button></div>`;
@@ -2438,7 +2450,9 @@ async function addUser(){
   err('');
   if (!isDbAdmin()){   // demo: add to the mock user list (no email is sent)
     const id = emp || (rl==='counsellor' ? 'CN-' : 'CP-') + String(100 + demoUsers.length).padStart(3,'0');
-    demoUsers.push({id, name, email, phone, role:rl, college, active:true}); saveDemoUsers();
+    const lvs = [...document.querySelectorAll('.aLv:checked')].map(x=>x.value);
+    if (rl==='counsellor' && !lvs.length) return err('Tick at least one level this counsellor calls for.');
+    demoUsers.push({id, name, email, phone, role:rl, college, active:true, levels: rl==='counsellor' ? lvs : undefined}); saveDemoUsers();
     if (rl==='counsellor'){ callModes[id] = mode; store.set('callModes', callModes); }
     document.getElementById('aOut').innerHTML = `<div class="note" style="background:#ecfdf5;color:#065f46">✔ Demo user <b>${esc(name)}</b> added (${id}). In the live system an invite email is sent.</div>`;
     renderView(); return;
@@ -2510,12 +2524,13 @@ async function setAccount(id, field, val){
 function demoUsersTable(){
   const rb = r => ({admin:'<span class="role" style="background:#ede9fe;color:#5b21b6">🛡 Admin</span>'})[r];
   return `<div class="muted" style="font-size:12px;margin:0 0 8px">Demo list (mock data, saved in this browser). With the real admin login this shows the accounts in the database.</div>
-  <div style="overflow-x:auto"><table class="utable"><thead><tr><th>Name</th><th>ID</th><th>Email · Phone</th><th>Role</th><th>Calling mode</th><th>College</th><th>Active</th><th></th></tr></thead><tbody>
+  <div style="overflow-x:auto"><table class="utable"><thead><tr><th>Name</th><th>ID</th><th>Email · Phone</th><th>Role</th><th>Calling mode</th><th>Calls for</th><th>College</th><th>Active</th><th></th></tr></thead><tbody>
   ${demoUsers.map(u=>`<tr style="cursor:default">
     <td><b>${esc(u.name)}</b>${u.role==='admin'?' <span class="muted">(you)</span>':''}</td><td class="muted">${u.id}</td>
     <td style="font-size:12px;white-space:nowrap">${esc(u.email)}<br>${esc(u.phone||'')}</td>
     <td>${u.role==='admin'?rb('admin'):`<select onchange="setDemoUser('${u.id}','role',this.value)"><option value="counsellor" ${u.role==='counsellor'?'selected':''}>🎧 Counsellor</option><option value="college" ${u.role==='college'?'selected':''}>🏫 College partner</option></select>`}</td>
     <td>${u.role==='counsellor'?`<select onchange="setMode('${u.id}',this.value)"><option value="auto" ${modeOf(u.id)==='auto'?'selected':''}>🤖 Automatic</option><option value="manual" ${modeOf(u.id)==='manual'?'selected':''}>✍ Manual</option></select>`:u.role==='admin'?'<span class="muted">Both</span>':'<span class="muted">—</span>'}</td>
+    <td>${u.role==='counsellor'?`<span class="lvt">${LEVELS.map(l=>`<label title="${l.name}"><input type="checkbox" ${levelsOf(u.id).includes(l.id)?'checked':''} onchange="toggleUserLevel('${u.id}','${l.id}',this.checked)"> ${({pu:'PU',ug:'Degree',pg:'Masters'})[l.id]}</label>`).join('')}</span>`:u.role==='admin'?'<span class="muted">All</span>':'<span class="muted">—</span>'}</td>
     <td>${u.role==='college'?`<select style="max-width:190px" onchange="setDemoUser('${u.id}','college',this.value)">${collegeOptions(u.college||myCollege)}</select>`:'<span class="muted">—</span>'}</td>
     <td>${u.role==='admin'?'✔':`<input type="checkbox" style="width:16px;height:16px" ${u.active?'checked':''} onchange="setDemoUser('${u.id}','active',this.checked)">`}</td>
     <td>${u.role==='admin'||!u.active?'':`<button class="btn" style="padding:4px 10px;font-size:12px;white-space:nowrap" onclick="viewAs('${u.id}')" title="See the app exactly as this user">👁 View as</button>`}</td></tr>`).join('')}
@@ -2530,9 +2545,9 @@ function demoSwitcher(compact){
   return `<div class="dsw${compact?' side':''}" onclick="event.stopPropagation()"><label>👁 ${compact?'Switch user (demo)':'Switch user to check their view (demo / admin only)'}</label>
     <select onchange="switchDemoUser(this.value)">${opts}</select></div>`;
 }
-function switchDemoUser(id){ if (id==='ADM-001' || (demoUsers.find(u=>u.id===id)||{}).role==='admin') setRole('admin'); else viewAs(id); }
+function switchDemoUser(id){ curDom = 'all'; if (id==='ADM-001' || (demoUsers.find(u=>u.id===id)||{}).role==='admin') setRole('admin'); else viewAs(id); }
 function setDemoUser(id, k, v){ const u = demoUsers.find(x=>x.id===id); if (!u) return; u[k] = v; saveDemoUsers(); toast(u.name+' updated'); renderAll(); }
-function viewAs(id){ const u = demoUsers.find(x=>x.id===id); if (!u) return;
+function viewAs(id){ const u = demoUsers.find(x=>x.id===id); if (!u) return; curDom = 'all';
   if (u.role==='counsellor') setRole('counsellor:'+u.id); else { myCollege = u.college || myCollege; setRole('college'); } }
 async function loadAccounts(){
   const el = document.getElementById('acctList'); if (!el) return;
