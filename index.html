@@ -359,7 +359,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 14:40 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 14:50 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -376,7 +376,7 @@ aside{position:sticky}
 
       <span class="bellw" id="bellW" style="display:none"><button class="bell" id="bellBtn" onclick="toggleBell(event)" title="Account requests waiting for approval">🔔<span id="bellCount"></span></button><div class="bellp" id="bellP" onclick="event.stopPropagation()"></div></span>
       <span class="uchip" id="userChip"></span>
-      <span class="pill" id="modeBadge" style="display:none;background:#fef3c7;color:#92400e;padding:6px 10px" title="Set by the admin in Settings › Calling mode"></span>
+      <span class="pill" id="modeBadge" style="display:none;background:#fef3c7;color:#92400e;padding:6px 10px" title="Set by the admin in Settings › Users & roles"></span>
       <button class="btn pri" id="campBtn" onclick="startCampaign()" title="Start / pause today's bot-call campaign"></button>
     </div>
     <div class="tabbar" id="tabbar">
@@ -988,7 +988,7 @@ function renderTop(){
   // Calling mode always visible (not for colleges): admin has both, a counsellor has the mode set by the admin
   mb.style.display = role==='college' ? 'none' : '';
   mb.innerHTML = role==='admin' ? '📞 Calling: 🤖 Automatic + ✍ Manual' : '📞 Calling: '+MODE_LBL[modeOf(actingC)];
-  mb.title = role==='admin' ? 'Admin can run the bot (▶ Start) and log manual calls. Counsellor modes: Settings › Calling mode' : 'Set by the admin in Settings › Calling mode';
+  mb.title = role==='admin' ? 'Admin can run the bot (▶ Start) and log manual calls. Counsellor modes: Settings › Users & roles' : 'Set by the admin in Settings › Users & roles';
   const isCol = role==='college';
   // Start only where calls happen (main tabs); hidden on Admin pages, Settings and the college view
   document.getElementById('campBtn').style.display = (isCol || isAdminView() || !canAuto()) ? 'none' : '';
@@ -1839,22 +1839,19 @@ function renderSettings(v){
   const inp = (k,l,ph)=>`<div><label>${l}${locked(k)?' <span class="muted">(managed by admin)</span>':''}</label><input value="${esc(profile[k]||'')}" placeholder="${ph||''}" ${locked(k)?'disabled':`oninput="setProf('${k}',this.value)"`}></div>`;
   const who = sbMe ? `🟢 Logged in to the database as <b>${esc(sbMe.full_name)}</b> (${sbMe.role})` : profile.id==='DEMO' ? '🟡 Demo user – mock data only, not a database account' : '';
   const SECS = [['profile','👤','My profile',true,'Name, contact, language'],['appearance','🎨','Appearance',true,'Theme, text size, layout'],['message','✉','Message settings',role!=='college',isAdmin?'WhatsApp / SMS texts':'View the message texts'],
-    ['callmode','📞','Calling mode',isAdmin,'Automatic or manual per counsellor'],['bot','🤖','Bot call settings',isAdmin,'Languages, hours, retries'],['users','👥','Users & roles',isAdmin,'Accounts, roles, view as'],
+['bot','🤖','Bot call settings',isAdmin,'Languages, hours, retries'],['users','👥','Users & roles',isAdmin,'Accounts, roles, calling mode'],
     ['college','🏫','College details',true,isAdmin?'Fees, seats, location':'View college details'],['guide','📘','Guides',role!=='college','Call flow, keys, colours']].filter(x=>x[3]);
   if (!SECS.some(x=>x[0]===setSec)) setSec = 'profile';
   v.innerHTML = `<div class="setwrap"><nav class="setnav">${SECS.map(([id,ic,l,_,d])=>`<div class="${id===setSec?'on':''}" onclick="setSec='${id}';renderView()"><span class="sic">${ic}</span><span><b>${l}</b><small>${d}</small></span></div>`).join('')}</nav>
   <div class="sgrid one">
   <div>
-    ${isAdmin?`<div class="card" data-sec="callmode"><h3>📞 Calling mode <small>· per counsellor</small></h3>
+    ${isAdmin?`<div class="card" data-sec="users"><h3>📞 Calling modes <small>· each counsellor's mode is set in the Calling mode column of the users table</small></h3>
       <div class="muted" style="font-size:13px;margin-bottom:10px"><b>🤖 Automatic</b> – the bot calls students one by one and records call time, keys pressed and voice queries.<br>
         <b>✍ Manual</b> – the counsellor calls from their own phone and logs status, talk time, interest, the student's message and admission by hand.<br>Admins always have both.</div>
-      <div class="mini"><table><thead><tr><th>Counsellor</th><th>ID</th><th>Calling mode</th></tr></thead><tbody>
-        ${counsellors().map(c=>`<tr style="cursor:default"><td>${c.name}</td><td class="muted">${c.id}</td><td><select onchange="setMode('${c.id}',this.value)">
-          <option value="auto" ${modeOf(c.id)==='auto'?'selected':''}>🤖 Automatic</option><option value="manual" ${modeOf(c.id)==='manual'?'selected':''}>✍ Manual</option></select></td></tr>`).join('')}
-      </tbody></table></div>
-      <div class="set" style="margin-top:10px"><div><label>Default for new counsellors</label><select onchange="defaultMode=this.value;store.set('defaultMode',defaultMode);toast('Default calling mode: '+MODE_LBL[defaultMode])">
+      
+      <div class="set" style="margin-top:4px"><div><label>Default for new counsellors</label><select onchange="defaultMode=this.value;store.set('defaultMode',defaultMode);toast('Default calling mode: '+MODE_LBL[defaultMode])">
         <option value="auto" ${defaultMode==='auto'?'selected':''}>🤖 Automatic</option><option value="manual" ${defaultMode==='manual'?'selected':''}>✍ Manual</option></select></div>
-        <div style="display:flex;align-items:flex-end"><div class="muted" style="font-size:12px">Counsellors come from <a href="#" onclick="event.preventDefault();setSec='users';renderView()">Users &amp; roles</a>. Use 👁 View as there to see their screen.</div></div></div></div>
+        </div></div>
 `:''}
     <div class="card" data-sec="profile"><h3>👤 My profile <small>· shown in the left panel</small></h3>${who?`<div style="font-size:13px;margin:-4px 0 10px">${who}</div>`:''}${demoSwitcher(false)}<div class="set">
       ${inp('name','Full name','e.g. Karthik S')}
