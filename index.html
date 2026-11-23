@@ -65,8 +65,9 @@ aside{background:var(--side);color:#cbd5e1;padding:18px 12px;position:sticky;top
 @keyframes bl{50%{opacity:.25}}
 /* ---------- Main ---------- */
 main{padding:18px 24px;min-width:0;grid-column:2}
-.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;row-gap:8px}
-#score{flex:0 1 auto;min-width:0;max-width:100%;overflow-x:auto}
+.top{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;margin-bottom:10px}
+#score{flex:0 1 auto;min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:thin}
+.top>*:not(#score):not(.sp){flex:none}
 .top .btn,.top .lsel{white-space:nowrap;padding:6px 8px;font-size:12.5px}
 .top h1{font-size:20px;margin:0}
 .demo{font-size:11px;background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:6px;font-weight:600}
@@ -281,7 +282,13 @@ textarea,.db select{width:100%;padding:9px;border:1px solid var(--line);border-r
 .who b{color:#fff;display:block;font-size:13px}
 .ptitle{font-size:18px;font-weight:700}
 .sgrid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;align-items:start}
-.clist{width:100%;font-size:13px}.clist td,.clist th{padding:7px 10px!important}
+.seatgrid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:14px;align-items:start;margin-bottom:14px}
+@media(max-width:1250px){.seatgrid{grid-template-columns:1fr}}
+.seatright{position:sticky;top:8px}
+.minich.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.clist tr.cexp>td{background:var(--card)!important;padding:4px 10px 10px 34px!important;cursor:default}
+.cin{width:100%;font-size:12.5px;border:1px solid var(--line);border-radius:8px}.cin th{background:var(--bg);font-size:11.5px}.cin td,.cin th{padding:5px 8px!important}.cin tbody tr{cursor:pointer}.cin tbody tr:hover td{background:var(--brand2)}
+.clist{width:100%;font-size:13px}.clist td:nth-child(n+2){white-space:nowrap}.clist td:nth-child(2) .muted{display:block;font-size:11.5px}.clist td,.clist th{padding:7px 10px!important}
 .clist tr{cursor:pointer}.clist tbody tr:hover td{background:var(--bg)}
 .clist tr.clv td{background:var(--bg);font-weight:700;font-size:12.5px;padding:6px 10px!important;border-top:1px solid var(--line)}
 .clist tr.csel td{background:var(--brand2)!important}.clist tr.csel td:first-child{box-shadow:inset 4px 0 0 var(--brand)}
@@ -359,7 +366,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 14:55 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 15:10 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -371,13 +378,13 @@ aside{position:sticky}
     <div class="top">
       <div id="score" style="display:flex;align-items:center"></div>
       <div class="sp"></div>
+      <button class="btn pri" id="campBtn" onclick="startCampaign()" title="Start / pause today's bot-call campaign"></button>
       <select class="lsel" id="langSel" onchange="setLang(this.value)" title="Interface language">
         <option value="en">🌐 EN</option><option value="ta">🌐 தமிழ்</option><option value="hi">🌐 हिन्दी</option></select>
 
       <span class="bellw" id="bellW" style="display:none"><button class="bell" id="bellBtn" onclick="toggleBell(event)" title="Account requests waiting for approval">🔔<span id="bellCount"></span></button><div class="bellp" id="bellP" onclick="event.stopPropagation()"></div></span>
       <span class="uchip" id="userChip"></span>
       <span class="pill" id="modeBadge" style="display:none;background:#fef3c7;color:#92400e;padding:6px 10px" title="Set by the admin in Settings › Users & roles"></span>
-      <button class="btn pri" id="campBtn" onclick="startCampaign()" title="Start / pause today's bot-call campaign"></button>
     </div>
     <div class="tabbar" id="tabbar">
       <div class="tabs" id="tabs"></div>
@@ -1657,34 +1664,41 @@ function renderSeats(v){
   const scopeName = curDom==='all' ? 'All courses' : curDom.startsWith('L:') ? LEVELS.find(l=>l.id===curDom.slice(2)).name : curDom.startsWith('G:') ? GROUPS[curDom.slice(2)].full : domName(curDom);
   // Course list (always all courses): click a row to show it, click again to go back to all courses
   const crow = d => { const R=rows.filter(r=>r.domain===d.id), on=curDom===d.id, q=sum(R,'quota'), f=sum(R,'filled'), left=q-f, p=pct(f,q), F=R.map(r=>r.fee);
-    return `<tr class="${on?'csel':''}" onclick="setDom('${on?'all':d.id}')" title="${on?'Click again to show all courses':'Show only '+domName(d.id)}">
+    const open = on && seatOpen===d.id;
+    return `<tr class="${on?'csel':''}" onclick="seatOpen='${open?'':d.id}';setDom('${d.id}')" title="${open?'Click to close the college list':'Show the colleges for '+domName(d.id)}">
       <td><span class="cdot" style="background:${on?'var(--brand)':'transparent'}"></span><b>${d.ic} ${d.grp?'Science · ':''}${d.name}</b></td>
       <td>${COURSE_DB[d.id].updated?`${COURSE_DB[d.id].recs} students <span class="muted">· ${dbWhen(d.id)}</span>`:'<span class="muted">No list yet</span>'}</td>
       <td>${dbPill(d.id)}</td>
       <td style="min-width:190px"><div style="display:flex;align-items:center;gap:8px"><span class="bar" style="width:90px"><i style="width:${p}%;background:${p>=100?'#dc2626':p>=80?'#d97706':'#4f46e5'}"></i></span><span><b>${left}</b> left <span class="muted">of ${q}</span></span></div></td>
       <td>${R.length}</td><td class="muted">${F.length?lakh(Math.min(...F))+' – '+lakh(Math.max(...F)):'—'}</td>
-      <td><button class="btn" style="padding:3px 10px;font-size:12px" title="Upload the candidate list for this course" onclick="event.stopPropagation();openUpload('${d.id}')">⬆ Upload</button></td></tr>`; };
+      <td><button class="btn" style="padding:3px 8px;font-size:12px" title="Upload the candidate list for this course" onclick="event.stopPropagation();openUpload('${d.id}')">⬆</button></td></tr>
+      ${open ? `<tr class="cexp"><td colspan="7"><table class="cin"><thead><tr><th>College</th><th>Location</th><th>Our seats left</th><th>Status</th><th>Fee / yr</th><th>Min score</th></tr></thead><tbody>
+        ${[...R].sort((a,b)=>b.rem-a.rem).map(r=>`<tr onclick="event.stopPropagation();openSeat('${r.name.replace(/'/g,"\\'")}')" title="Open the seat chart"><td><b>${esc(r.name)}</b></td><td class="muted">${r.area?esc(r.area)+', ':''}${r.district||'—'}</td>
+          <td><b>${r.rem}</b> <span class="muted">of ${r.quota}</span></td><td><span class="pill" style="color:${SEAT_ST[r.st].c};background:${SEAT_ST[r.st].bg}">${r.st}</span></td><td>${lakh(r.fee)}</td><td>${r.minScore}%</td></tr>`).join('')}
+        </tbody></table></td></tr>` : ''}`; };
+  const listLv = curDom==='all' ? 'all' : curDom.startsWith('L:') ? curDom.slice(2) : curDom.startsWith('G:') ? GROUPS[curDom.slice(2)].lv : levelOf(curDom);
   const lvChip = (id,l) => `<span class="chip ${curDom===id?'on':''}" onclick="setDom('${id}')">${l}</span>`;
   v.innerHTML = `
-  <div class="card mini" style="margin-bottom:12px">
+  <div class="seatgrid"><div class="card mini" style="margin:0">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
       <h3 style="margin:0">📥 Courses &amp; candidate lists</h3>
       <span class="chips" style="margin-left:6px">${lvChip('all','All courses')}${LEVELS.map(l=>lvChip('L:'+l.id, l.name.split(' (')[0])).join('')}${lvChip('G:pu_sci','PU Science')}</span>
-      <span class="sp"></span><a class="btn" style="text-decoration:none" href="templates/AdmitConnect_Data_Template.xlsx" download>⬇ Excel template</a>
-      <button class="btn pri" onclick="openUpload('${COURSES.some(d=>d.id===curDom)?curDom:''}')">⬆ Upload list</button></div>
+      <span class="sp"></span><a class="btn" style="text-decoration:none;padding:5px 10px" href="templates/AdmitConnect_Data_Template.xlsx" download title="Download the Excel template">⬇ Template</a>
+      <button class="btn pri" style="padding:5px 10px" onclick="openUpload('${COURSES.some(d=>d.id===curDom)?curDom:''}')">⬆ Upload list</button></div>
     <div style="overflow-x:auto"><table class="clist"><thead><tr><th>Course</th><th>Candidate list</th><th>Status</th><th>Our seats</th><th>Colleges</th><th>Fee / yr</th><th></th></tr></thead><tbody>
-    ${LEVELS.map(l=>`<tr class="clv" onclick="setDom('${curDom==='L:'+l.id?'all':'L:'+l.id}')"><td colspan="7">${l.ic} ${l.name} <span class="muted" style="font-weight:400">· ${COURSES.filter(d=>d.lv===l.id).length} courses · click to show the whole level</span></td></tr>${COURSES.filter(d=>d.lv===l.id).map(crow).join('')}`).join('')}
+    ${LEVELS.filter(l=>listLv==='all'||l.id===listLv).map(l=>`<tr class="clv" onclick="setDom('${curDom==='L:'+l.id?'all':'L:'+l.id}')"><td colspan="7">${l.ic} ${l.name} <span class="muted" style="font-weight:400">· ${COURSES.filter(d=>d.lv===l.id).length} courses · click to show the whole level</span></td></tr>${COURSES.filter(d=>d.lv===l.id && (curDom!=='G:pu_sci' || d.grp==='pu_sci')).map(crow).join('')}`).join('')}
     </tbody></table></div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;margin:0 0 8px;flex-wrap:wrap">
+  <div class="seatright">  <div style="display:flex;align-items:center;gap:10px;margin:0 0 10px;flex-wrap:wrap">
     <b style="font-size:15px">Showing: ${esc(scopeName)}</b><span class="muted">· ${sel.length} colleges · <b>${sum(sel,'rem')}</b> of ${sum(sel,'quota')} our seats left · ${lakh(sel.reduce((s,r)=>s+r.filled*r.fee,0))} filled value</span>
     ${curDom!=='all'||colFilter?`<button class="btn" style="padding:4px 10px" onclick="colFilter='';setDom('all')">↺ Show all courses</button>`:''}
     ${colFilter?`<span class="pill" style="background:#eef2ff;color:#3730a3">🏫 ${esc(colFilter)}</span>`:''}</div>
-  <div class="minich">
+  <div class="minich two">
     <div class="card"><h3>Our seats – all courses <small>· filled / left</small></h3><div class="ch"><canvas id="c7"></canvas></div></div>
     <div class="card"><h3>College status <small>· ${esc(scopeName)}</small></h3><div class="ch"><canvas id="c12"></canvas></div></div>
     <div class="card"><h3>Most seats left <small>· ${esc(scopeName)}</small></h3><div class="ch"><canvas id="c13"></canvas></div></div>
     <div class="card"><h3>Fee range – all courses <small>· ₹ L/yr</small></h3><div class="ch"><canvas id="c14"></canvas></div></div></div>
+  </div></div>
   <div class="filters" style="margin-top:4px"><select id="sst" onchange="fillSeatRows()"><option value="any">All statuses</option><option>Full</option><option>Almost full</option><option>Open</option></select>
     <span class="muted" id="src"></span><span class="muted">· Click a college to see its seat chart</span></div>
   <div class="tw fit"><table>
@@ -1803,7 +1817,8 @@ function renderCollege(v){
 const THEMES = [['light', 'Light', ['#111827', '#4f46e5', '#f5f6fa']], ['dark', 'Dark', ['#060b16', '#6366f1', '#121b2e']], ['ocean', 'Ocean', ['#0c2a3e', '#0284c7', '#f2f8fc']], ['forest', 'Forest', ['#0f2a1c', '#15803d', '#f3f8f4']], ['sunset', 'Sunset', ['#2b1608', '#ea580c', '#fbf6f2']]];
 let setSec = 'profile';
 // College details: admin can edit fee / seats / location / min score; everyone else sees them read-only
-let cdF = {lv:'', dom:'', dist:'', area:'', q:''};   // College details filters (independent of the left panel)
+let cdF = {lv:'', dom:'', dist:'', area:'', q:''};
+let seatOpen = '';   // Seats & colleges: course whose colleges are shown under its row   // College details filters (independent of the left panel)
 function collegeDetailsCard(){
   const isAd = role==='admin';
   const base = role==='college' ? COLLEGE_LIST.filter(x=>x.name===myCollege) : COLLEGE_LIST;
