@@ -359,7 +359,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 14:30 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 14:40 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -980,10 +980,9 @@ function renderTop(){
            : role==='counsellor' ? `🎧 ${esc(cName(actingC))} · Counsellor · ${MODE_LBL[modeOf(actingC)]}`
            : `🏫 ${esc(myCollege)} · College partner`;
   const previewing = realAdmin && role!=='admin' && (!sbMe || sbMe.role==='admin');
-  document.getElementById('userChip').innerHTML = previewing
-    ? `<span title="You are previewing this user's view">👁 ${me}</span><a href="#" onclick="event.preventDefault();setRole('admin')" title="Back to your admin view">✕ Back to admin</a>`
-    : me;
-  document.getElementById('userChip').classList.toggle('prev', previewing);
+  // Header shows the user exactly as that user would see it (switch users from the left panel in the demo)
+  document.getElementById('userChip').innerHTML = me;
+  document.getElementById('userChip').classList.remove('prev');
   document.getElementById('bellW').style.display = role==='admin' ? '' : 'none';
   const mb = document.getElementById('modeBadge');
   // Calling mode always visible (not for colleges): admin has both, a counsellor has the mode set by the admin
