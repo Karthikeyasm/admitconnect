@@ -180,11 +180,11 @@ tr.grp:hover{background:none}
 .ov.on{display:block}
 .drawer{position:fixed;top:0;right:0;width:560px;max-width:100%;height:100vh;background:var(--card);z-index:21;transition:transform .25s,width .2s;transform:translateX(105%);overflow:auto;box-shadow:-10px 0 30px #0002}
 .drawer.on{transform:none}
-.drawer.wide{width:min(var(--dw,860px),calc(100vw - 70px))}
-.set.four{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.drawer.wide{width:min(var(--dw,40vw),max(40vw,520px),calc(100vw - 40px));min-width:min(520px,calc(100vw - 40px))}
+.set.four{grid-template-columns:repeat(auto-fit,minmax(125px,1fr))}
 .dgrip{position:sticky;top:0;float:left;width:7px;height:100vh;margin:0 -7px -100vh 0;cursor:ew-resize;z-index:5}.dgrip:hover,.dgrip.on{background:#6366f155}
 .drawer.dragging{transition:none}
-.boxrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.boxrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
 .minibox{border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--bg)}.minibox label{margin-bottom:4px}
 .msec{border:1px solid var(--line);border-radius:10px;padding:0 14px;margin:0 0 10px;background:var(--card)}
 .msec>summary{cursor:pointer;font-weight:700;font-size:14.5px;padding:11px 0;list-style:none;display:flex;gap:6px;align-items:center}
@@ -379,7 +379,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 16:45 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 17:00 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -1572,7 +1572,7 @@ function openBotCall(id){
 function closeDrawer(){ const d=document.getElementById('drawer'); d.classList.remove('on'); document.getElementById('ov').classList.remove('on'); setTimeout(()=>{ if(!d.classList.contains('on')) d.classList.remove('wide','mid'); },260); }
 (function(){ const d=()=>document.getElementById('drawer'); let start=null;
   document.addEventListener('mousedown', e=>{ if (!e.target.classList.contains('dgrip')) return; e.preventDefault(); start={x:e.clientX, w:d().getBoundingClientRect().width}; d().classList.add('dragging'); e.target.classList.add('on'); });
-  document.addEventListener('mousemove', e=>{ if (!start) return; const w=Math.max(420, Math.min(window.innerWidth-70, start.w + (start.x - e.clientX))); d().style.setProperty('--dw', w+'px'); });
+  document.addEventListener('mousemove', e=>{ if (!start) return; const cap = d().classList.contains('wide') ? Math.max(window.innerWidth*0.4, 520) : window.innerWidth-70; const w=Math.max(420, Math.min(cap, start.w + (start.x - e.clientX))); d().style.setProperty('--dw', w+'px'); });
   document.addEventListener('mouseup', ()=>{ if (!start) return; start=null; d().classList.remove('dragging'); document.querySelectorAll('.dgrip.on').forEach(g=>g.classList.remove('on')); try{ localStorage.setItem('ac_dw', d().style.getPropertyValue('--dw')); }catch(e){} });
 })();
 function addGrip(){ const dr=document.getElementById('drawer'); if (!dr.querySelector(':scope > .dgrip')){ const g=document.createElement('div'); g.className='dgrip'; g.title='Drag to resize the panel'; dr.prepend(g); }
@@ -2074,7 +2074,7 @@ function openManual(qi, callId, candId){
     <div class="set four" style="gap:10px">
       <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap" id="fStatus"><label style="margin:0">Call status<span class="rqd">*</span></label>${rch('mStatus', Object.entries(STATUS).map(([k,o])=>[k,o.l]), v('status','answered'))}</div>
       <div><label>Time of call<span class="rqd">*</span></label><input id="mTime" type="time" value="${v('time',tnow)}"></div>
-      <div><label>Talk time (min)<span class="rqd">*</span> <span class="muted" style="font-weight:400">(if answered)</span></label><input id="mDur" type="number" min="0" step="0.5" value="${c&&c.dur?(c.dur/60).toFixed(1):''}" placeholder="e.g. 3"></div>
+      <div><label title="Required for answered calls">Talk time (min)<span class="rqd">*</span></label><input id="mDur" type="number" min="0" step="0.5" value="${c&&c.dur?(c.dur/60).toFixed(1):''}" placeholder="e.g. 3"></div>
       <div><label>Language spoken<span class="rqd">*</span></label><select id="mLang"><option value="">— choose —</option>${opt(LANGS.map(l=>[l.n,l.n]), v('lang',cand.lang))}</select></div>
       <div><label>Interest level<span class="rqd">*</span></label><select id="mLvl">${opt([['','— choose —'],['3','High'],['2','Medium'],['1','Low'],['0','Not interested']], v('lvl',''))}</select></div>
 
@@ -2083,13 +2083,13 @@ function openManual(qi, callId, candId){
       <div><label>Counsellor notes <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="mNotes" rows="2" placeholder="Next step, call-back time…">${c?esc(c.notes||''):''}</textarea></div>
       </div>
       <div style="grid-column:1/-1" class="boxrow">
-      <div class="minibox"><label>Reverted back <span class="muted" style="font-weight:400">(optional · empty = No)</span></label>${cbx('mRev', [['Call back','Call back'],['WhatsApp reply','WhatsApp'],['SMS reply','SMS']], c&&c.reverted?c.revertVia:'')}</div>
-      <div class="minibox"><label>Admission status <span class="muted" style="font-weight:400">(optional · empty = Not converted)</span></label>${cbx('mAdm', ['In process','Joined','Dropped'].map(a=>[a,a]), ['In process','Joined','Dropped'].includes(v('admission',''))?v('admission',''):'', "document.getElementById('mColW').style.display=document.getElementById('mAdm').value?'':'none'")}</div>
+      <div class="minibox"><label>Reverted back <span class="muted" style="font-weight:400">(empty = No)</span></label>${cbx('mRev', [['Call back','Call back'],['WhatsApp reply','WhatsApp'],['SMS reply','SMS']], c&&c.reverted?c.revertVia:'')}</div>
+      <div class="minibox"><label>Admission status <span class="muted" style="font-weight:400">(empty = Not converted)</span></label>${cbx('mAdm', ['In process','Joined','Dropped'].map(a=>[a,a]), ['In process','Joined','Dropped'].includes(v('admission',''))?v('admission',''):'', "document.getElementById('mColW').style.display=document.getElementById('mAdm').value?'':'none'")}</div>
       </div>
       <div id="mColW" style="grid-column:1/-1;${['Joined','In process','Dropped'].includes(v('admission',''))?'':'display:none'}"><label>College</label><select id="mCol" onchange="mcCtx.college=this.value"></select></div>
     </div></details>
     <details class="msec" open><summary>📍 Location the student wants</summary><div class="set four" style="gap:10px">
-      <div><label>Preferred district (Karnataka)<span class="rqd">*</span></label><select id="mDist" onchange="mcCtx.dist=this.value==='Any'?'':this.value;mcCtx.anyDist=this.value==='Any';mcCtx.area='';renderArea();renderColleges()"><option value="">— choose —</option><option value="Any" ${c&&c.locality&&c.locality.district==='Any district'?'selected':''}>Any district (no preference)</option>${KA_DISTRICTS.map(d=>`<option ${c&&c.locality&&c.locality.district===d?'selected':''}>${d}</option>`).join('')}</select></div>
+      <div><label>District (Karnataka)<span class="rqd">*</span></label><select id="mDist" onchange="mcCtx.dist=this.value==='Any'?'':this.value;mcCtx.anyDist=this.value==='Any';mcCtx.area='';renderArea();renderColleges()"><option value="">— choose —</option><option value="Any" ${c&&c.locality&&c.locality.district==='Any district'?'selected':''}>Any district (no preference)</option>${KA_DISTRICTS.map(d=>`<option ${c&&c.locality&&c.locality.district===d?'selected':''}>${d}</option>`).join('')}</select></div>
       <div><label>Area <span class="muted" style="font-weight:400">(optional)</span></label><select id="mArea" onchange="mcCtx.area=this.value;renderColleges()"></select></div>
       <div><label>or PIN code <span class="muted" style="font-weight:400">(optional)</span></label><input id="mPin" inputmode="numeric" maxlength="6" placeholder="e.g. 560034" value="${c&&c.locality?esc(c.locality.pin||''):''}" oninput="onPin(this.value)"></div>
       <div style="display:flex;align-items:flex-end"><div id="mPinOut" class="muted" style="font-size:12px;padding-bottom:8px"></div></div>
@@ -2101,7 +2101,7 @@ function openManual(qi, callId, candId){
   // Course picker: level → (PU) Science / Commerce → tick boxes for the courses under it
   const start = (c && c.courses) || [v('chosenDom',null)||cand.domain];
   const d0 = DOMAINS.find(d=>d.id===start[0]) || COURSES[0];
-  mcCtx.ticks = new Set(start); mcCtx.lv = d0.lv; mcCtx.stream = d0.lv==='pu' ? (d0.grp ? 'sci' : 'com') : null;
+  mcCtx.ticks = new Set(start.filter(id=>levelOf(id)===d0.lv)); mcCtx.lv = d0.lv; mcCtx.stream = d0.lv==='pu' ? (d0.grp ? 'sci' : 'com') : null;
   mcCtx.college = c && c.college;
   mcCtx.sug = new Set((c && c.suggested) || []); mcCtx.anyDist = !!(c && c.locality && c.locality.district==='Any district'); mcCtx.dist = (c && c.locality && c.locality.district && !mcCtx.anyDist) ? c.locality.district : ''; mcCtx.area = (c && c.locality && c.locality.area) || '';
   mcCtx.f = mcCtx.f || {fee:'', fit:true, open:true, sort:'near', km:''};
@@ -2198,9 +2198,9 @@ function renderCourseBox(onlyCol){
   if (!onlyCol){
   const chip = (on, label, fn) => `<button type="button" class="btn${on?' pri':''}" style="padding:5px 12px;font-size:13px" onclick="${fn}">${label}</button>`;
   document.getElementById('mCourseBox').innerHTML = `
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${LEVELS.map(l=>chip(mcCtx.lv===l.id, l.ic+' '+l.name, `mcCtx.lv='${l.id}';mcCtx.stream=${l.id==='pu'?"mcCtx.stream||'sci'":'null'};renderCourseBox()`)).join('')}</div>
-    ${mcCtx.lv==='pu' ? `<div style="display:flex;gap:6px;margin-top:6px">${chip(mcCtx.stream==='sci','🔬 Science',"mcCtx.stream='sci';renderCourseBox()")}${chip(mcCtx.stream==='com','₹ Commerce'+(mcCtx.ticks.has('pu_com')?' ✔':''),"mcCtx.stream='com';mcCtx.ticks.has('pu_com')?mcCtx.ticks.delete('pu_com'):mcCtx.ticks.add('pu_com');renderCourseBox()")}</div>` : ''}
-    <div style="display:flex;gap:6px 18px;flex-wrap:wrap;margin-top:8px">${(mcCtx.lv==='pu'&&mcCtx.stream==='com') ? '' : mcCourses().map(d=>`<label style="display:inline-flex;gap:6px;align-items:center;font-size:14px;cursor:pointer;font-weight:400;width:auto;margin:0;white-space:nowrap;color:inherit"><input type="checkbox" style="width:16px;height:16px;margin:0;padding:0;flex:none" ${mcCtx.ticks.has(d.id)?'checked':''} onchange="this.checked?mcCtx.ticks.add('${d.id}'):mcCtx.ticks.delete('${d.id}');renderCourseBox()"> ${d.name}</label>`).join('')}</div>
+    ${mcCtx.lv!=='pu' ? '' : `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:2px"><span class="muted" style="font-size:13px">${LEVELS.find(l=>l.id===mcCtx.lv).ic} ${LEVELS.find(l=>l.id===mcCtx.lv).name.split(' (')[0]}:</span>
+    ${mcCtx.lv==='pu' ? chip(mcCtx.stream==='sci','🔬 Science',"mcCtx.stream='sci';mcCtx.ticks.delete('pu_com');renderCourseBox()")+chip(mcCtx.stream==='com','₹ Commerce'+(mcCtx.ticks.has('pu_com')?' ✔':''),"mcCtx.stream='com';mcCtx.ticks=new Set(['pu_com']);renderCourseBox()") : ''}</div>`}
+    ${(mcCtx.lv==='pu'&&mcCtx.stream==='com') ? '' : `<div style="display:flex;gap:6px 18px;flex-wrap:wrap;align-items:center;margin-top:${mcCtx.lv==='pu'?'8px':'2px'}">${mcCtx.lv==='pu'?'':`<span class="muted" style="font-size:13px">${LEVELS.find(l=>l.id===mcCtx.lv).ic} ${LEVELS.find(l=>l.id===mcCtx.lv).name.split(' (')[0]}:</span>`}${mcCourses().map(d=>`<label style="display:inline-flex;gap:6px;align-items:center;font-size:14px;cursor:pointer;font-weight:400;width:auto;margin:0;white-space:nowrap;color:inherit"><input type="checkbox" style="width:16px;height:16px;margin:0;padding:0;flex:none" ${mcCtx.ticks.has(d.id)?'checked':''} onchange="this.checked?mcCtx.ticks.add('${d.id}'):mcCtx.ticks.delete('${d.id}');renderCourseBox()"> ${d.name}</label>`).join('')}</div>`}
     <div class="muted" style="font-size:12px;margin-top:6px">${ticked.length ? 'Selected: <b>'+ticked.map(d=>shortDom(d.id)).join(', ')+'</b>' : 'No course ticked yet'}</div>`;
   renderColleges(); }
   const col = document.getElementById('mCol');
