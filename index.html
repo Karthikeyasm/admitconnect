@@ -67,7 +67,7 @@ aside{background:var(--side);color:#cbd5e1;padding:18px 12px;position:sticky;top
 main{padding:18px 24px;min-width:0;grid-column:2}
 .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;row-gap:8px}
 #score{flex:0 1 auto;min-width:0;max-width:100%;overflow-x:auto}
-.top .btn,.top .lsel{white-space:nowrap;padding:7px 11px;font-size:13px}
+.top .btn,.top .lsel{white-space:nowrap;padding:6px 8px;font-size:12.5px}
 .top h1{font-size:20px;margin:0}
 .demo{font-size:11px;background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:6px;font-weight:600}
 .sp{flex:1}
@@ -115,10 +115,11 @@ main{padding:18px 24px;min-width:0;grid-column:2}
 .sb{display:inline-flex;align-items:stretch;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;flex-wrap:nowrap;flex-shrink:0}
 .sb .hd{background:#111827;color:#fff;font-size:11px;font-weight:600;padding:6px 10px;display:flex;flex-direction:column;justify-content:center;line-height:1.25}
 .sb .hd small{color:#94a3b8;font-weight:500}
-.sb .it{padding:5px 9px;border-left:1px solid var(--line);display:flex;flex-direction:column;justify-content:center;min-width:64px}
+.sb .it{padding:5px 7px;border-left:1px solid var(--line);display:flex;flex-direction:column;justify-content:center;min-width:54px}
 .sb .it b{font-size:16px;line-height:1.1}
 .sb .it span{font-size:10px;color:var(--muted);white-space:nowrap}
 .sb .it:first-of-type{border-left:none}
+@media(max-width:1520px){.sb .it{min-width:46px;padding:4px 6px}.sb .it span{font-size:9px}.sb .hd{padding:5px 8px;font-size:10px}.ptitle{font-size:17px!important}.top .lsel{max-width:120px}}
 /* Tabs */
 .tabbar{display:flex;align-items:flex-end;gap:10px;border-bottom:1px solid var(--line);margin-bottom:12px;flex-wrap:wrap}
 .tabs{display:flex;gap:2px;flex:0 1 auto;flex-wrap:wrap;min-width:0}
@@ -280,6 +281,18 @@ textarea,.db select{width:100%;padding:9px;border:1px solid var(--line);border-r
 .who b{color:#fff;display:block;font-size:13px}
 .ptitle{font-size:18px;font-weight:700}
 .sgrid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;align-items:start}
+.tilerow{display:flex;gap:10px;align-items:flex-start;margin-top:6px}
+.tilelv{width:70px;flex:none;font-weight:600;font-size:13px;padding-top:10px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:8px;flex:1}
+.ctile{position:relative;border:1px solid var(--line);border-radius:10px;padding:7px 36px 7px 10px;cursor:pointer;background:var(--card)}
+.ctile:hover{border-color:var(--brand)}
+.ctile.on{border-color:var(--brand);background:var(--brand2);box-shadow:0 0 0 2px var(--brand) inset}
+.ctile .ct1{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctile .ct2{font-size:11.5px;color:var(--muted);margin-top:2px}
+.ctile .ct2 .pill{font-size:10.5px;padding:1px 6px}
+.ctile .btn{position:absolute;top:7px;right:7px;padding:2px 7px;font-size:12px}
+.minich{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:12px}
+.minich .card{margin:0;padding:10px 12px}.minich h3{font-size:13px;margin:0 0 4px}.minich .ch{height:170px}
 .filters.compact select{flex:none;width:auto;max-width:280px}
 .crumbs a{color:var(--brand);text-decoration:none;font-weight:600}.crumbs a:hover{text-decoration:underline}
 .setwrap{display:grid;grid-template-columns:210px 1fr;gap:16px;align-items:start}
@@ -317,7 +330,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 13:30 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 13:45 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -331,9 +344,9 @@ aside{position:sticky}
       <div class="sp"></div>
       <select class="lsel" id="langSel" onchange="setLang(this.value)" title="Interface language">
         <option value="en">🌐 EN</option><option value="ta">🌐 தமிழ்</option><option value="hi">🌐 हिन्दी</option></select>
-      <select class="lsel" id="colSel" onchange="role==='college'?setCollege(this.value):(colFilter=this.value,renderAll())" title="College" style="max-width:160px"></select>
+      <select class="lsel" id="colSel" onchange="role==='college'?setCollege(this.value):(colFilter=this.value,renderAll())" title="College" style="max-width:140px"></select>
       <span class="bellw" id="bellW" style="display:none"><button class="bell" id="bellBtn" onclick="toggleBell(event)" title="Account requests waiting for approval">🔔<span id="bellCount"></span></button><div class="bellp" id="bellP" onclick="event.stopPropagation()"></div></span>
-      <select class="lsel" id="roleSel" onchange="setRole(this.value)" title="Demo: view the app as this role"></select>
+      <select class="lsel" id="roleSel" onchange="setRole(this.value)" title="Demo: view the app as this role" style="max-width:130px"></select>
       <span class="pill" id="modeBadge" style="display:none;background:#fef3c7;color:#92400e;padding:6px 10px" title="Set by the admin in Settings › Calling mode"></span>
       <button class="btn pri" id="campBtn" onclick="startCampaign()" title="Start / pause today's bot-call campaign"></button>
     </div>
@@ -904,12 +917,12 @@ function renderSide(){
   document.getElementById('secDom').textContent = T('domains');
   const act = id => curDom===id && !isAdminView() ? 'active' : '';
   // Manual-mode counsellors pick the course inside the call form, so the panel shows only the levels
-  const noSub = role==='counsellor' && myMode()==='manual';
+  const noSub = true;   // left panel shows only the levels (course is chosen inside pages / the call form)
   const cnt = f => candidates.filter(f).length;
   document.getElementById('domains').innerHTML =
     `<div class="dom ${act('all')}" title="All courses" onclick="sideDom('all')"><span class="ic">◎</span>All courses<span class="ct">${candidates.length}</span></div>` +
     LEVELS.map(l=>`<div class="dom lvlh ${act('L:'+l.id)}" title="${l.name}" onclick="sideDom('L:${l.id}')">
-        ${noSub?'<span class="car"></span>':`<span class="car" onclick="event.stopPropagation();toggleLvl('${l.id}')">${openLv[l.id]?'▾':'▸'}</span>`}<span class="ic">${l.ic}</span><b>${l.name}</b>
+        ${noSub?'':`<span class="car" onclick="event.stopPropagation();toggleLvl('${l.id}')">${openLv[l.id]?'▾':'▸'}</span>`}<span class="ic">${l.ic}</span><b>${l.name}</b>
         <span class="ct">${cnt(c=>levelOf(c.domain)===l.id)}</span></div>` +
       (openLv[l.id] && !noSub ? (()=>{ let seen={}; return COURSES.filter(d=>d.lv===l.id).map(d=>{
         let h='';
@@ -1548,20 +1561,6 @@ function renderAnalytics(v){
   <div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;margin-bottom:12px">
     <b>📅 Day board</b><select onchange="anaDay=this.value;renderView()">${Array.from({length:14},(_,i)=>{ const d=new Date(TODAY); d.setDate(d.getDate()-i); return `<option value="${iso(d)}" ${iso(d)===bd?'selected':''}>${i===0?'Today · ':i===1?'Yesterday · ':''}${fmtD(d)}</option>`; }).join('')}</select>
     <div class="sb" style="margin:0">${bit('Calls',BL.length,'#1c2333')}${bit('Accepted',bn('answered'),'#16a34a')}${bit('Rejected',bn('rejected'),'#dc2626')}${bit('Not picked',bn('not_picked'),'#ea580c')}${bit('Heard fully',BL.filter(c=>c.completed).length,'#4f46e5')}${bit('Interested',BL.filter(c=>c.lvl>=2).length,'#2563eb')}${bit('Msgs sent',msgs.filter(m=>iso(m.date)===bd && matchDom(m.domain) && (!COL||m.domain===COL.domain)).length,'#0891b2')}${bit('Joined',BL.filter(c=>c.admission==='Joined').length,'#7c3aed')}</div></div>
-  <div class="kpis">
-    ${kpi('Calls made', L.length, new Set(L.map(c=>c.cand.id)).size+' candidates')}
-    ${kpi('Answered', pct(ans.length,L.length)+'%', ans.length+' calls picked')}
-    ${kpi('Heard fully', pct(comp.length,ans.length)+'%', comp.length+' of answered')}
-    ${kpi('Avg. listen time', mmss(avg), 'of '+mmss(SCRIPT_SEC)+' message')}
-    ${kpi('Interested (key 1/2)', intr.length, pct(intr.length,ans.length)+'% of answered')}
-    ${kpi('Queries recorded', L.filter(c=>c.query).length, 'pressed 8')}
-    ${kpi('Reverted back', rev.length + M.filter(m=>m.reverted && !m.call.reverted).length, rev.length+' after calls · '+M.filter(m=>m.reverted && !m.call.reverted).length+' only via message')}
-    ${kpi('Admissions joined', joined.length, inproc.length+' more in process')}
-    ${kpi('Messages sent', M.length, pct(M.filter(m=>m.channel==='WhatsApp').length,M.length)+'% WhatsApp')}
-    ${kpi('Messages viewed', pct(M.filter(m=>m.status==='viewed'||m.status==='replied').length,M.length)+'%', M.filter(m=>m.status==='viewed'||m.status==='replied').length+' viewed')}
-    ${kpi('Responded (reply / link)', M.filter(m=>m.resp).length, M.filter(m=>m.resp&&m.resp.type==='link').length+' link clicks · '+M.filter(m=>m.resp&&m.resp.type==='reply').length+' replies')}
-    ${kpi('Blocked / spam', M.filter(m=>m.status==='blocked'||m.status==='spam').length, pct(M.filter(m=>m.status==='blocked'||m.status==='spam').length,M.length)+'% of sent')}
-  </div>
   <div class="grid2">
     <div class="card"><h3>Daily calls by outcome</h3><div class="ch"><canvas id="c1"></canvas></div></div>
     <div class="card"><h3>Daily success rate <small>· answered % and heard-fully %</small></h3><div class="ch"><canvas id="c2"></canvas></div></div></div>
@@ -1610,65 +1609,57 @@ function renderAnalytics(v){
 
 /* ================= Admin: Seats & colleges ================= */
 function renderSeats(v){
-  const rows = COLLEGE_LIST.map(seatRow), ds = COURSES.filter(d=>matchDom(d.id));
-  const sum = (L,f)=>L.reduce((s,x)=>s+x[f],0);
+  const rows = COLLEGE_LIST.map(seatRow), sum = (L,f)=>L.reduce((s,x)=>s+x[f],0);
   const sel = rows.filter(r=>matchDom(r.domain) && (!colFilter || r.name===colFilter));
-  // Where am I: clickable path so you can always go back up (All courses › PU › Science › course)
-  const crumbs = [['all','All courses']];
-  if (curDom!=='all'){ const d = DOMAINS.find(x=>x.id===curDom), lv = curDom.startsWith('L:') ? curDom.slice(2) : curDom.startsWith('G:') ? GROUPS[curDom.slice(2)].lv : d && d.lv;
-    if (lv) crumbs.push(['L:'+lv, LEVELS.find(l=>l.id===lv).name]);
-    const g = curDom.startsWith('G:') ? curDom.slice(2) : d && d.grp; if (g) crumbs.push(['G:'+g, GROUPS[g].name]);
-    if (d) crumbs.push([d.id, d.name]); }
-  const listSt = d => dbStatus(d.id);
+  const scopeName = curDom==='all' ? 'All courses' : curDom.startsWith('L:') ? LEVELS.find(l=>l.id===curDom.slice(2)).name : curDom.startsWith('G:') ? GROUPS[curDom.slice(2)].full : domName(curDom);
+  // Course tiles = the options (always all courses, so you can jump anywhere / go back with one click)
+  const tile = d => { const R=rows.filter(r=>r.domain===d.id), on=curDom===d.id;
+    return `<div class="ctile ${on?'on':''}" onclick="setDom('${on?'all':d.id}')" title="${on?'Click again to show all courses':'Show '+domName(d.id)}">
+      <div class="ct1">${d.ic} ${d.grp?'Sci · ':''}${d.name}</div>
+      <div class="ct2">${COURSE_DB[d.id].updated?`${COURSE_DB[d.id].recs} students · ${dbWhen(d.id)}`:'No list yet'} ${dbPill(d.id)}</div>
+      <div class="ct2"><b>${sum(R,'rem')}</b> of ${sum(R,'quota')} our seats left · ${R.length} colleges</div>
+      <button class="btn" title="Upload the candidate list for this course" onclick="event.stopPropagation();openUpload('${d.id}')">⬆</button></div>`; };
+  const lvChip = (id,l) => `<span class="chip ${curDom===id?'on':''}" onclick="setDom('${id}')">${l}</span>`;
   v.innerHTML = `
-  <div class="card" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;margin-bottom:12px">
-    <b>Showing:</b><span class="crumbs">${crumbs.map(([id,l],i)=>i<crumbs.length-1?`<a href="#" onclick="event.preventDefault();setDom('${id}')">${l}</a> ›`:`<b>${l}</b>`).join(' ')}</span>
-    <select onchange="setDom(this.value)" title="Choose a course"><option value="all">All courses</option>${LEVELS.map(l=>`<optgroup label="${l.name}"><option value="L:${l.id}" ${curDom==='L:'+l.id?'selected':''}>All ${l.name.split(' (')[0]}</option>${Object.entries(GROUPS).filter(([k,g])=>g.lv===l.id).map(([k,g])=>`<option value="G:${k}" ${curDom==='G:'+k?'selected':''}>All ${g.full}</option>`).join('')}${COURSES.filter(d=>d.lv===l.id).map(d=>`<option value="${d.id}" ${curDom===d.id?'selected':''}>${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</option>`).join('')}</optgroup>`).join('')}</select>
-    ${curDom!=='all'?`<button class="btn" style="padding:4px 10px" onclick="setDom('all')">↺ All courses</button>`:''}
-    ${colFilter?`<span class="pill" style="background:#eef2ff;color:#3730a3">🏫 ${esc(colFilter)} <a href="#" onclick="event.preventDefault();colFilter='';renderAll()">✕</a></span>`:''}</div>
-  <div class="kpis">
-    ${kpi('Colleges', sel.length, sel.filter(r=>r.st==='Full').length+' full · '+sel.filter(r=>r.st!=='Full').length+' open')}
-    ${kpi('Total seats', sum(sel,'total').toLocaleString('en-IN'), 'across these colleges')}
-    ${kpi('Allotted to us', sum(sel,'quota').toLocaleString('en-IN'), 'seats we may fill')}
-    ${kpi('Filled by us', sum(sel,'filled').toLocaleString('en-IN'), pct(sum(sel,'filled'),sum(sel,'quota'))+'% of our quota')}
-    ${kpi('Remaining for us', sum(sel,'rem').toLocaleString('en-IN'), 'seats still open')}
-    ${kpi('Value of seats filled', lakh(sel.reduce((s,r)=>s+r.filled*r.fee,0)), 'yearly fee × seats filled')}
-  </div>
-  <div class="grid2">
-    <div class="card"><h3>Our seats by course <small>· filled vs remaining</small></h3><div class="ch"><canvas id="c7"></canvas></div></div>
-    <div class="card"><h3>College status <small>· Open / Almost full / Full</small></h3><div class="ch"><canvas id="c12"></canvas></div></div></div>
-  <div class="grid2">
-    <div class="card"><h3>Most seats left for us <small>· top 10 colleges</small></h3><div class="ch"><canvas id="c13"></canvas></div></div>
-    <div class="card"><h3>Fee range by course <small>· ₹ lakh per year, lowest – highest</small></h3><div class="ch"><canvas id="c14"></canvas></div></div></div>
-  <div class="card mini" style="margin-bottom:12px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="margin:0">📥 Candidate lists <small>· one list per course</small></h3>
+  <div class="card mini" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <h3 style="margin:0">📥 Courses &amp; candidate lists</h3>
+      <span class="chips" style="margin-left:6px">${lvChip('all','All courses')}${LEVELS.map(l=>lvChip('L:'+l.id, l.name.split(' (')[0])).join('')}${lvChip('G:pu_sci','PU Science')}</span>
       <span class="sp"></span><a class="btn" style="text-decoration:none" href="templates/AdmitConnect_Data_Template.xlsx" download>⬇ Excel template</a>
-      <button class="btn pri" onclick="openUpload('${curDom.startsWith('L:')||curDom.startsWith('G:')||curDom==='all'?'':curDom}')">⬆ Upload list</button></div>
-    <table style="margin-top:8px"><thead><tr><th>Course</th><th>Records</th><th>Last updated</th><th>Status</th><th>Colleges</th><th>Our seats left</th><th></th></tr></thead><tbody>
-    ${ds.map(d=>{ const R=rows.filter(r=>r.domain===d.id); return `<tr onclick="setDom('${d.id}')"><td><b>${d.ic} ${d.grp?GROUPS[d.grp].name+' · ':''}${d.name}</b></td>
-      <td>${COURSE_DB[d.id].updated?COURSE_DB[d.id].recs:'—'}</td><td>${COURSE_DB[d.id].updated?dbWhen(d.id):'<span class="muted">never</span>'}</td><td>${dbPill(d.id)}</td>
-      <td>${R.length}</td><td><b>${sum(R,'rem')}</b> <span class="muted">of ${sum(R,'quota')}</span></td>
-      <td><button class="btn" style="padding:3px 10px;font-size:12px" onclick="event.stopPropagation();openUpload('${d.id}')">⬆ Upload</button></td></tr>`; }).join('')}
-    </tbody></table></div>
-  <div class="filters"><select id="sst" onchange="fillSeatRows()"><option value="any">All statuses</option><option>Full</option><option>Almost full</option><option>Open</option></select>
+      <button class="btn pri" onclick="openUpload('${COURSES.some(d=>d.id===curDom)?curDom:''}')">⬆ Upload list</button></div>
+    ${LEVELS.map(l=>`<div class="tilerow"><div class="tilelv">${l.ic} ${l.name.split(' (')[0]}</div><div class="tiles">${COURSES.filter(d=>d.lv===l.id).map(tile).join('')}</div></div>`).join('')}
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin:0 0 8px;flex-wrap:wrap">
+    <b style="font-size:15px">Showing: ${esc(scopeName)}</b><span class="muted">· ${sel.length} colleges · <b>${sum(sel,'rem')}</b> of ${sum(sel,'quota')} our seats left · ${lakh(sel.reduce((s,r)=>s+r.filled*r.fee,0))} filled value</span>
+    ${curDom!=='all'||colFilter?`<button class="btn" style="padding:4px 10px" onclick="colFilter='';setDom('all')">↺ Show all courses</button>`:''}
+    ${colFilter?`<span class="pill" style="background:#eef2ff;color:#3730a3">🏫 ${esc(colFilter)}</span>`:''}</div>
+  <div class="minich">
+    <div class="card"><h3>Our seats – all courses <small>· filled / left</small></h3><div class="ch"><canvas id="c7"></canvas></div></div>
+    <div class="card"><h3>College status <small>· ${esc(scopeName)}</small></h3><div class="ch"><canvas id="c12"></canvas></div></div>
+    <div class="card"><h3>Most seats left <small>· ${esc(scopeName)}</small></h3><div class="ch"><canvas id="c13"></canvas></div></div>
+    <div class="card"><h3>Fee range – all courses <small>· ₹ L/yr</small></h3><div class="ch"><canvas id="c14"></canvas></div></div></div>
+  <div class="filters" style="margin-top:4px"><select id="sst" onchange="fillSeatRows()"><option value="any">All statuses</option><option>Full</option><option>Almost full</option><option>Open</option></select>
     <span class="muted" id="src"></span><span class="muted">· Click a college to see its seat chart</span></div>
   <div class="tw fit"><table>
     <thead><tr><th>College / Institute</th><th>Course</th><th>District</th><th>Total seats</th><th>Allotted to us</th><th>Filled by us</th><th>Remaining</th><th>Progress</th><th>Status</th><th>Fee / seat / yr</th><th>Value filled</th><th>This campaign</th></tr></thead>
     <tbody id="srows"></tbody></table></div>`;
   fillSeatRows();
-  const grid = {grid:{color:'#eef0f5'}};
-  charts.c7 = new Chart(c7,{type:'bar',data:{labels:ds.map(d=>shortDom(d.id)),datasets:[
-    {label:'Filled by us',data:ds.map(d=>sum(sel.filter(r=>r.domain===d.id),'filled')),backgroundColor:'#4f46e5',borderRadius:3},
-    {label:'Remaining',data:ds.map(d=>sum(sel.filter(r=>r.domain===d.id),'rem')),backgroundColor:'#c7d2fe',borderRadius:3}]},
-    options:{maintainAspectRatio:false,scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,...grid}},plugins:{legend:{position:'bottom'}}}});
+  const grid = {grid:{color:'#eef0f5'}}, small = {font:{size:10}};
+  // all-courses charts: the chosen course is highlighted, the rest faded
+  const hl = (d,on,off) => (matchDom(d.id) ? on : off);
+  charts.c7 = new Chart(c7,{type:'bar',data:{labels:COURSES.map(d=>d.name.replace('State Board + ','SB+')),datasets:[
+    {label:'Filled by us',data:COURSES.map(d=>sum(rows.filter(r=>r.domain===d.id),'filled')),backgroundColor:COURSES.map(d=>hl(d,'#4f46e5','#c7c9d9')),borderRadius:2},
+    {label:'Left',data:COURSES.map(d=>sum(rows.filter(r=>r.domain===d.id),'rem')),backgroundColor:COURSES.map(d=>hl(d,'#a5b4fc','#e8e9f0')),borderRadius:2}]},
+    options:{maintainAspectRatio:false,onClick:(e,el)=>{ if(el.length) setDom(COURSES[el[0].index].id); },scales:{x:{stacked:true,grid:{display:false},ticks:{...small,maxRotation:60,minRotation:45}},y:{stacked:true,...grid,ticks:small}},plugins:{legend:{display:false}}}});
   const stN = k => sel.filter(r=>r.st===k).length;
   charts.c12 = new Chart(c12,{type:'doughnut',data:{labels:['Open','Almost full','Full'],datasets:[{data:[stN('Open'),stN('Almost full'),stN('Full')],backgroundColor:[SEAT_ST['Open'].c,SEAT_ST['Almost full'].c,SEAT_ST['Full'].c]}]},
-    options:{maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom'}}}});
-  const top = [...sel].sort((a,b)=>b.rem-a.rem).slice(0,10);
-  charts.c13 = new Chart(c13,{type:'bar',data:{labels:top.map(r=>r.name.length>28?r.name.slice(0,27)+'…':r.name),datasets:[{label:'Seats left for us',data:top.map(r=>r.rem),backgroundColor:top.map(r=>SEAT_ST[r.st].c),borderRadius:3}]},
-    options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{afterLabel:i=>shortDom(top[i.dataIndex].domain)+' · '+lakh(top[i.dataIndex].fee)+'/yr'}}},scales:{x:{...grid},y:{grid:{display:false}}}}});
-  const fr = ds.map(d=>{ const F=sel.filter(r=>r.domain===d.id).map(r=>r.fee); return F.length?[Math.min(...F),Math.max(...F)]:null; });
-  charts.c14 = new Chart(c14,{type:'bar',data:{labels:ds.map(d=>shortDom(d.id)),datasets:[{label:'Fee range (₹ L/yr)',data:fr,backgroundColor:'#a5b4fc',borderColor:'#4f46e5',borderWidth:1,borderRadius:4,borderSkipped:false}]},
-    options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>i.raw?'₹'+i.raw[0].toFixed(2)+' L – ₹'+i.raw[1].toFixed(2)+' L':''}}},scales:{x:{grid:{display:false}},y:{...grid,title:{display:true,text:'₹ lakh / year'}}}}});
+    options:{maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:11}}}}}});
+  const top = [...sel].sort((a,b)=>b.rem-a.rem).slice(0,6);
+  charts.c13 = new Chart(c13,{type:'bar',data:{labels:top.map(r=>r.name.length>20?r.name.slice(0,19)+'…':r.name),datasets:[{label:'Seats left',data:top.map(r=>r.rem),backgroundColor:top.map(r=>SEAT_ST[r.st].c),borderRadius:2}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,onClick:(e,el)=>{ if(el.length) openSeat(top[el[0].index].name); },plugins:{legend:{display:false}},scales:{x:{...grid,ticks:small},y:{grid:{display:false},ticks:small}}}});
+  const fr = COURSES.map(d=>{ const F=rows.filter(r=>r.domain===d.id).map(r=>r.fee); return F.length?[Math.min(...F),Math.max(...F)]:null; });
+  charts.c14 = new Chart(c14,{type:'bar',data:{labels:COURSES.map(d=>d.name.replace('State Board + ','SB+')),datasets:[{label:'Fee range',data:fr,backgroundColor:COURSES.map(d=>hl(d,'#818cf8','#dcdcea')),borderRadius:3,borderSkipped:false}]},
+    options:{maintainAspectRatio:false,onClick:(e,el)=>{ if(el.length) setDom(COURSES[el[0].index].id); },plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>i.raw?'₹'+i.raw[0].toFixed(2)+' L – ₹'+i.raw[1].toFixed(2)+' L':''}}},scales:{x:{grid:{display:false},ticks:{...small,maxRotation:60,minRotation:45}},y:{...grid,ticks:small}}}});
   makeCollapsible(v);
 }
 function fillSeatRows(){
