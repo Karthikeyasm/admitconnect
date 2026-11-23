@@ -359,7 +359,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 14:50 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 14:55 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -977,7 +977,7 @@ function renderTop(){
   // Header shows who is logged in (read-only). The admin can preview another user from Settings › Users & roles.
   const realAdmin = !sbMe || sbMe.role==='admin';
   const me = role==='admin' ? `🛡 ${esc(profile.name||'Admin')} · Admin`
-           : role==='counsellor' ? `🎧 ${esc(cName(actingC))} · Counsellor · ${MODE_LBL[modeOf(actingC)]}`
+           : role==='counsellor' ? `🎧 ${esc(cName(actingC))} · Counsellor`   // mode is shown once, in the 📞 Calling badge next to it
            : `🏫 ${esc(myCollege)} · College partner`;
   const previewing = realAdmin && role!=='admin' && (!sbMe || sbMe.role==='admin');
   // Header shows the user exactly as that user would see it (switch users from the left panel in the demo)
