@@ -191,8 +191,9 @@ tr.grp:hover{background:none}
 .msec>summary::-webkit-details-marker{display:none}.msec>summary:before{content:'▸';color:var(--muted);width:14px}.msec[open]>summary:before{content:'▾'}
 .msec[open]{padding-bottom:12px}
 .msec #mcRight{border:0;padding:0}
-.drawer.mid{width:min(var(--dw,1080px),calc(100vw - 70px))}
-.drawer .cin td{white-space:nowrap}.drawer .cin td:first-child{white-space:normal;min-width:200px}.drawer .cin td,.drawer .cin th{padding:6px 7px!important}
+.drawer.mid{width:max-content;min-width:600px;max-width:calc(100vw - 70px)}
+.drawer.mid .cin{width:auto!important;min-width:0!important}.drawer .cin td{white-space:nowrap}.drawer .cin td:first-child{white-space:normal;min-width:170px;max-width:240px}
+.drawer.mid .cin td:nth-child(n+2),.drawer.mid .cin th:nth-child(n+2){text-align:center}.drawer .cin td,.drawer .cin th{padding:6px 7px!important}
 .drawer .mcwrap{padding:18px 22px}
 .dh{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:10px}
 .dh h2{margin:0;font-size:18px}
@@ -380,7 +381,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 17:35 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 17:45 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -1772,9 +1773,9 @@ function openCollegePanel(dom){
   document.getElementById('drawer').innerHTML = `
   <div class="dh"><div><div class="muted" style="font-size:12px">${LEVELS.find(l=>l.id===levelOf(dom)).name}</div><h2 style="margin-top:4px">🏫 ${domName(dom)}</h2>
     <div class="muted">${R.length} colleges · <b>${sum('rem')}</b> of ${sum('quota')} our seats left · ${COURSE_DB[dom].updated?COURSE_DB[dom].recs+' students in the list':'no candidate list yet'}</div></div>
-    <div style="display:flex;gap:6px;align-items:flex-start"><button class="btn" style="padding:5px 10px;font-size:13px" onclick="openUpload('${dom}')">⬆ Upload list</button><button class="x" onclick="closeDrawer()">×</button></div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px"><div style="display:flex;gap:6px;align-items:center"><button class="btn" style="padding:5px 10px;font-size:13px" onclick="openUpload('${dom}')">⬆ Upload list</button><button class="x" onclick="closeDrawer()">×</button></div>
+      <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:12.5px;color:var(--muted);font-weight:500">↕ Sort <select style="width:auto;padding:5px 8px;font-size:13px" onchange="cpSort=this.value;openCollegePanel('${dom}')">${CP_SORTS.map(([k,l])=>`<option value="${k}" ${cpSort===k?'selected':''}>${l}</option>`).join('')}</select></label></div></div>
   <div class="db">
-    <div style="display:flex;align-items:center;gap:8px;margin:0 0 8px"><span class="muted" style="font-size:13px">↕ Sort by</span><select style="width:auto" onchange="cpSort=this.value;openCollegePanel('${dom}')">${CP_SORTS.map(([k,l])=>`<option value="${k}" ${cpSort===k?'selected':''}>${l}</option>`).join('')}</select></div>
     <div style="overflow-x:auto"><table class="cin"><thead><tr><th>College</th><th>Total seats</th><th>Our seats left</th><th>Progress</th><th>Status</th><th>Fee / yr</th><th>Min score</th><th>This campaign</th></tr></thead><tbody>
     ${R.map(r=>`<tr onclick="openSeat('${r.name.replace(/'/g,"\\'")}')" title="Open the seat chart"><td><b>${esc(r.name)}</b><div class="muted" style="font-size:11.5px">📍 ${r.area?esc(r.area)+', ':''}${r.district||'—'}</div></td><td>${r.total}</td>
       <td><b>${r.rem}</b> <span class="muted">of ${r.quota}</span></td><td style="white-space:nowrap"><span class="bar" style="width:40px"><i style="width:${r.p}%;background:${SEAT_ST[r.st].c}"></i></span> ${r.p}%</td>
