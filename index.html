@@ -180,7 +180,12 @@ tr.grp:hover{background:none}
 .ov.on{display:block}
 .drawer{position:fixed;top:0;right:0;width:560px;max-width:100%;height:100vh;background:var(--card);z-index:21;transition:transform .25s,width .2s;transform:translateX(105%);overflow:auto;box-shadow:-10px 0 30px #0002}
 .drawer.on{transform:none}
-.drawer.wide{width:1180px;max-width:100vw}
+.drawer.wide{width:860px;max-width:100vw}
+.msec{border:1px solid var(--line);border-radius:10px;padding:0 14px;margin:0 0 10px;background:var(--card)}
+.msec>summary{cursor:pointer;font-weight:700;font-size:14.5px;padding:11px 0;list-style:none;display:flex;gap:6px;align-items:center}
+.msec>summary::-webkit-details-marker{display:none}.msec>summary:before{content:'▸';color:var(--muted);width:14px}.msec[open]>summary:before{content:'▾'}
+.msec[open]{padding-bottom:12px}
+.msec #mcRight{border:0;padding:0}
 .drawer.mid{width:1080px;max-width:100vw}
 .drawer .cin td{white-space:nowrap}.drawer .cin td:nth-child(-n+2){white-space:normal}.drawer .cin td,.drawer .cin th{padding:6px 7px!important}
 .drawer .mcwrap{padding:18px 22px}
@@ -369,7 +374,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 15:45 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 16:05 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -1468,7 +1473,12 @@ function openMsg(id){
 }
 
 /* ================= Call detail drawer ================= */
-function openCall(id){
+// Which panel format to use: a manual-mode counsellor always gets the manual format, an automatic one the bot format;
+// the admin sees each call in the format of how it was made (queued students: bot format with a Log call button).
+const panelFmt = c => role==='counsellor' ? (modeOf(actingC)==='manual' ? 'manual' : 'bot') : (c && c.manual ? 'manual' : 'bot');
+function openCall(id){ const c = calls.find(x=>x.id===id); if (!c) return;
+  if (panelFmt(c)==='manual') return openManual(null, id); return openBotCall(id); }
+function openBotCall(id){
   const c = calls.find(x=>x.id===id); if(!c) return;
   const ev = [];
   if (c.manual){
@@ -1557,26 +1567,28 @@ function openCall(id){
 function closeDrawer(){ const d=document.getElementById('drawer'); d.classList.remove('on'); document.getElementById('ov').classList.remove('on'); setTimeout(()=>{ if(!d.classList.contains('on')) d.classList.remove('wide','mid'); },260); }
 function showDrawer(wide){ const d=document.getElementById('drawer'); d.classList.remove('mid'); d.classList.toggle('wide', !!wide); d.classList.add('on'); document.getElementById('ov').classList.add('on'); d.scrollTop = 0; }
 // Panel for a student who has not been called yet (queued) – same panel, with "Log call"
-function openCand(candId, qi){
+function openCand(candId, qi){ if (panelFmt(null)==='manual') return openManual(qi!=null?qi:null, null, candId); return openBotCand(candId, qi); }
+function openBotCand(candId, qi){
   const cand = candidates.find(x=>x.id===candId); if (!cand) return;
-  const q = qi!=null ? todayStats(true).Q[qi] : null;
+  const q = qi!=null ? todayStats(true).Q[qi] : null, calling = q && q.state==='calling';
   document.getElementById('drawer').innerHTML = `
-  <div class="dh"><div><div class="muted" style="font-size:12px">${idChip(q&&q.state==='calling'?'Calling…':'Queued', q&&q.state==='calling'?'calling':'queued')} · ${cand.id} · ${q?q.kind+(q.kind==='Retry'?' #'+q.attempt:''):'Not called yet'}</div><h2 style="margin-top:6px">${cand.name}</h2>
-    <div class="muted">${cand.masked} · ${cand.city}</div><div style="margin-top:8px"><span class="pill" style="background:#f1f5f9;color:#64748b">⏳ Not called yet</span></div></div>
+  <div class="dh"><div><div class="muted" style="font-size:12px">${idChip(calling?'Calling…':'Queued', calling?'calling':'queued')} · ${q?q.kind+(q.kind==='Retry'?' #'+q.attempt:''):'Not called yet'}</div><h2 style="margin-top:6px">${cand.name}</h2>
+    <div class="muted">${cand.masked} · ${cand.city}</div><div style="margin-top:8px"><span class="pill" style="background:#f1f5f9;color:#64748b">⏳ ${calling?'Calling now':'Waiting for the bot'}</span> <span class="pill" style="background:#e0e7ff;color:#3730a3">🤖 Bot call</span></div></div>
     <button class="x" onclick="closeDrawer()">×</button></div>
   <div class="db">
     <div class="kv">
-      <div><label>Course (Excel)</label>${domName(cand.domain)}</div>
-      <div><label>Language (Excel)</label>${cand.lang}</div>
+      <div><label>Date & time</label><span class="muted">Not called yet</span></div>
+      <div><label>Listened</label><span class="muted">—</span></div>
+      <div><label>Language chosen</label><span class="muted">— (Excel: ${cand.lang})</span></div>
+      <div><label>Course chosen on call</label><span class="muted">— (Excel: ${shortDom(cand.domain)})</span></div>
       <div><label>Last exam score</label>${cand.score}%</div>
-      <div><label>Parent</label>${esc(cand.parent||'—')}</div>
+      <div><label>College offered</label><span class="muted">—</span></div>
     </div>
-    <div class="sect">Call status</div><div class="muted">In today's queue – no call yet.</div>
+    <div class="sect">Interest level</div><div class="muted">Not reached yet</div>
+    <div class="sect">Call timeline</div><div class="tl"><div class="e end"><span class="t">—</span>${calling?'The bot is calling now':'Waiting – the bot calls this student when the campaign runs (▶ Start)'}</div></div>
     <div class="sect">All call attempts for this candidate</div>
     ${cand.calls.map(x=>`<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer" onclick="openCall('${x.id}')">${cid(x)}<span style="width:110px">${fmtD(x.date)}, ${x.time}</span>${statusPill(x.status)}<span class="muted" style="margin-left:auto">${x.dur?mmss(x.dur):'—'}</span></div>`).join('') || '<div class="muted">No earlier calls.</div>'}
-    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
-      ${canManual()?`<button class="btn pri" onclick="openManual(${qi!=null?qi:'null'},null,'${cand.id}')">📞 Log call</button>`:''}
-      ${canAuto()?`<button class="btn" onclick="toast('The bot calls queued students when you press ▶ Start')">🤖 Bot will call (▶ Start)</button>`:''}</div>
+    ${role==='admin'?`<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap"><button class="btn" onclick="openManual(${qi!=null?qi:'null'},null,'${cand.id}')">✍ Log a manual call instead</button></div>`:''}
   </div>`;
   showDrawer(false);
 }
@@ -2022,7 +2034,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeDrawer(); cl
 
 /* ================= Manual call logging ================= */
 // Admin can edit any call; a manual-mode counsellor can edit manual calls
-const canEdit = c => role==='admin' || (myMode()==='manual' && c.manual);
+const canEdit = c => role==='admin' || myMode()==='manual';
 let mcCtx = null;
 function openManual(qi, callId, candId){
   const c = callId ? calls.find(x=>x.id===callId) : null;
@@ -2040,30 +2052,37 @@ function openManual(qi, callId, candId){
       `<label style="display:inline-flex;gap:6px;align-items:center;font-size:14px;font-weight:400;width:auto;margin:0;color:inherit;cursor:pointer"><input type="checkbox" style="width:16px;height:16px;margin:0" data-g="${id}" data-v="${esc(val)}" ${String(sel||'')===String(val)?'checked':''} onchange="tickOne(this);${after}"> ${l}</label>`).join('')}</div>`;
   const box = document.getElementById('drawer');
   box.innerHTML = `<div class="mcwrap">
-    <div style="display:flex;align-items:center;gap:10px"><button class="btn" style="padding:4px 10px;font-size:13px" onclick="closeMc()">← Back</button><h2 style="margin:0;font-size:18px">${c?'✎ Edit call':'📞 Log manual call'}</h2><button class="x" onclick="closeDrawer()">×</button></div>
-    <div class="muted" style="margin:4px 0 12px">${cand.name} · ${cand.masked} · ${domName(c?c.domain:cand.domain)} · Score <b>${cand.score}%</b> · ${cand.city}${c?' · '+c.id+(c.manual?'':' (bot call – admin edit)'):''}</div>
-    <div class="muted" style="font-size:12px;margin:-6px 0 10px"><span class="rqd">*</span> = required before saving (for answered calls). Everything else is optional.</div>
-    <div class="mc-grid"><div>
+    <div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1">
+      <div class="muted" style="font-size:12px">${c?cid(c)+' · Attempt #'+c.attempt:idChip('Queued','queued')+' · '+cand.id} · ${c&&!c.manual&&role==='admin'?'<span class="pill" style="background:#e0e7ff;color:#3730a3">🤖 Bot call · editing as admin</span>':'<span class="pill" style="background:#fef3c7;color:#92400e">✍ Manual call</span>'}</div>
+      <h2 style="margin:6px 0 2px;font-size:20px">${esc(cand.name)}</h2>
+      <div class="muted">${cand.masked} · ${cand.city} · ${domName(c?c.domain:cand.domain)} · Score <b>${cand.score}%</b></div></div>
+      <button class="x" onclick="closeDrawer()">×</button></div>
+    <div class="muted" style="font-size:12px;margin:10px 0"><span class="rqd">*</span> = required before saving (for answered calls). Click a section heading to fold it.</div>
+    <details class="msec" open><summary>📞 Call details</summary>
     <div class="set" style="gap:10px">
       <div style="grid-column:1/-1" id="fStatus"><label>Call status<span class="rqd">*</span></label>${rch('mStatus', Object.entries(STATUS).map(([k,o])=>[k,o.l]), v('status','answered'))}</div>
       <div><label>Time of call<span class="rqd">*</span></label><input id="mTime" type="time" value="${v('time',tnow)}"></div>
       <div><label>Talk time (min)<span class="rqd">*</span> <span class="muted" style="font-weight:400">(if answered)</span></label><input id="mDur" type="number" min="0" step="0.5" value="${c&&c.dur?(c.dur/60).toFixed(1):''}" placeholder="e.g. 3"></div>
       <div><label>Language spoken<span class="rqd">*</span></label><select id="mLang"><option value="">— choose —</option>${opt(LANGS.map(l=>[l.n,l.n]), v('lang',cand.lang))}</select></div>
       <div><label>Interest level<span class="rqd">*</span></label><select id="mLvl">${opt([['','— choose —'],['3','High'],['2','Medium'],['1','Low'],['0','Not interested']], v('lvl',''))}</select></div>
+    </div></details>
+    <details class="msec" open><summary>📍 Location the student wants</summary><div class="set" style="gap:10px">
       <div><label>Preferred district (Karnataka)<span class="rqd">*</span></label><select id="mDist" onchange="mcCtx.dist=this.value==='Any'?'':this.value;mcCtx.anyDist=this.value==='Any';mcCtx.area='';renderArea();renderColleges()"><option value="">— choose —</option><option value="Any" ${c&&c.locality&&c.locality.district==='Any district'?'selected':''}>Any district (no preference)</option>${KA_DISTRICTS.map(d=>`<option ${c&&c.locality&&c.locality.district===d?'selected':''}>${d}</option>`).join('')}</select></div>
       <div><label>Area <span class="muted" style="font-weight:400">(optional)</span></label><select id="mArea" onchange="mcCtx.area=this.value;renderColleges()"></select></div>
       <div><label>or PIN code <span class="muted" style="font-weight:400">(optional)</span></label><input id="mPin" inputmode="numeric" maxlength="6" placeholder="e.g. 560034" value="${c&&c.locality?esc(c.locality.pin||''):''}" oninput="onPin(this.value)"></div>
       <div style="display:flex;align-items:flex-end"><div id="mPinOut" class="muted" style="font-size:12px;padding-bottom:8px"></div></div>
-      <div style="grid-column:1/-1"><label>Course discussed<span class="rqd">*</span> <span class="muted" style="font-weight:400">(tick one or more)</span></label><div id="mCourseBox"></div></div>
+    </div></details>
+    <details class="msec" open><summary>🎓 Course discussed<span class="rqd">*</span></summary><div id="mCourseBox"></div></details>
+    <details class="msec" id="mColSec"><summary>🏫 College suggestions <span id="mColCount" class="muted" style="font-weight:400"></span></summary><div id="mcRight"></div></details>
+    <details class="msec" open><summary>💬 Follow-up &amp; admission</summary><div class="set" style="gap:10px">
       <div style="grid-column:1/-1"><label>Candidate's message / query <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="mMsg" rows="2" placeholder="What did the student or parent say? e.g. wants colleges near home, fees under 1.5 L…">${c&&c.query?esc(c.query.text):''}</textarea></div>
       <div style="grid-column:1/-1"><label>Reverted back <span class="muted" style="font-weight:400">(optional · empty = No)</span></label>${cbx('mRev', [['Call back','Call back'],['WhatsApp reply','WhatsApp'],['SMS reply','SMS']], c&&c.reverted?c.revertVia:'')}</div>
       <div style="grid-column:1/-1"><label>Admission status <span class="muted" style="font-weight:400">(optional · empty = Not converted)</span></label>${cbx('mAdm', ['In process','Joined','Dropped'].map(a=>[a,a]), ['In process','Joined','Dropped'].includes(v('admission',''))?v('admission',''):'', "document.getElementById('mColW').style.display=document.getElementById('mAdm').value?'':'none'")}</div>
       <div id="mColW" style="grid-column:1/-1;${['Joined','In process','Dropped'].includes(v('admission',''))?'':'display:none'}"><label>College</label><select id="mCol" onchange="mcCtx.college=this.value"></select></div>
       <div style="grid-column:1/-1"><label>Counsellor notes <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="mNotes" rows="2" placeholder="Next step, call-back time…">${c?esc(c.notes||''):''}</textarea></div>
-    </div></div>
-    <div class="mc-right" id="mcRight"></div></div>
+    </div></details>
     <div class="aerr" id="mErr"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" onclick="closeMc()">Cancel</button><button class="btn pri" onclick="saveManual()">Save call</button></div></div>`;
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;position:sticky;bottom:0;background:var(--card);padding:10px 0;border-top:1px solid var(--line)"><button class="btn" onclick="closeDrawer()">Close</button><button class="btn pri" onclick="saveManual()">Save call</button></div></div>`;
   // Course picker: level → (PU) Science / Commerce → tick boxes for the courses under it
   const start = (c && c.courses) || [v('chosenDom',null)||cand.domain];
   const d0 = DOMAINS.find(d=>d.id===start[0]) || COURSES[0];
@@ -2101,7 +2120,7 @@ function pickChip(id, btn){
   document.getElementById(id).value = btn.dataset.v;
   btn.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('pri', b===btn));
 }
-function closeMc(){   // back to the details panel (or close if there is nothing to go back to)
+function closeMc(){ closeDrawer(); return;   // manual format is one panel: closing returns to the list
   const {c, q, cand} = mcCtx || {};
   if (c) openCall(c.id); else if (cand) openCand(cand.id, q ? todayStats(true).Q.indexOf(q) : null); else closeDrawer();
 }
@@ -2137,6 +2156,7 @@ function renderColleges(){
   const tick = (k,l) => `<label style="display:inline-flex;gap:5px;align-items:center;font-size:13px;font-weight:400;width:auto;margin:0;color:inherit"><input type="checkbox" style="width:15px;height:15px;margin:0" ${f[k]?'checked':''} onchange="mcCtx.f.${k}=this.checked;renderColleges()"> ${l}</label>`;
   const seatsLeft = rows.reduce((a,r)=>a+r.rem,0), openN = rows.filter(r=>r.st==='Open').length, almost = rows.filter(r=>r.st==='Almost full').length, full = rows.filter(r=>r.st==='Full').length;
   const cheapest = rows.length ? Math.min(...rows.map(r=>r.fee)) : 0;
+  const cc = document.getElementById('mColCount'); if (cc) cc.textContent = `· ${rows.length} match${rows.length===1?'':'es'}${mcCtx.sug.size?' · '+mcCtx.sug.size+' suggested':''}`;
   const near = byKm && rows[0] && rows[0].km!=null ? ` Nearest: <b>${esc(rows[0].name)}</b> (${fmtKm(rows[0].km)}).` : '';
   const summary = rows.length ? `<div class="note" style="margin:0 0 8px;font-size:13px;background:#eef2ff;color:#3730a3">
       <b>${rows.length} college${rows.length>1?'s':''}</b>${where} · <b>${seatsLeft} seats pending</b> for our students (${[openN&&openN+' open', almost&&almost+' almost full', full&&full+' full'].filter(Boolean).join(', ')}).<br>Fees from ₹${cheapest.toFixed(2)} L/yr.${near || (rows[0]?` Best match: <b>${esc(rows[0].name)}</b> (${rows[0].rem} seats left).`:'')}</div>` : '';
@@ -2194,7 +2214,7 @@ function saveManual(){
     if (!g('mDist')) mark('mDist','Preferred district');
     if (!courses.length) mark('mCourseBox','Course discussed');
   }
-  if (miss.length){ document.getElementById('mErr').innerHTML = '⚠ Please fill the required fields: <b>'+miss.join(', ')+'</b>'; document.querySelector('#drawer .mc-miss').scrollIntoView({block:'center',behavior:'smooth'}); return; }
+  if (miss.length){ document.querySelectorAll('#drawer details.msec').forEach(d=>{ if (d.querySelector('.mc-miss')) d.open = true; }); document.getElementById('mErr').innerHTML = '⚠ Please fill the required fields: <b>'+miss.join(', ')+'</b>'; document.querySelector('#drawer .mc-miss').scrollIntoView({block:'center',behavior:'smooth'}); return; }
   const by = role==='admin' ? (profile.name||'Admin') : cName(actingC);
   if (!c){   // new manual call (from queue or from a candidate)
     const att = q ? q.attempt : cand.calls.length+1;
