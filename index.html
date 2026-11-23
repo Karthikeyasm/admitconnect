@@ -181,6 +181,8 @@ tr.grp:hover{background:none}
 .drawer{position:fixed;top:0;right:0;width:560px;max-width:100%;height:100vh;background:var(--card);z-index:21;transition:transform .25s,width .2s;transform:translateX(105%);overflow:auto;box-shadow:-10px 0 30px #0002}
 .drawer.on{transform:none}
 .drawer.wide{width:860px;max-width:100vw}
+.set.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:1000px){.drawer.wide .set.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .msec{border:1px solid var(--line);border-radius:10px;padding:0 14px;margin:0 0 10px;background:var(--card)}
 .msec>summary{cursor:pointer;font-weight:700;font-size:14.5px;padding:11px 0;list-style:none;display:flex;gap:6px;align-items:center}
 .msec>summary::-webkit-details-marker{display:none}.msec>summary:before{content:'▸';color:var(--muted);width:14px}.msec[open]>summary:before{content:'▾'}
@@ -374,7 +376,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 16:05 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 16:20 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -2059,12 +2061,18 @@ function openManual(qi, callId, candId){
       <button class="x" onclick="closeDrawer()">×</button></div>
     <div class="muted" style="font-size:12px;margin:10px 0"><span class="rqd">*</span> = required before saving (for answered calls). Click a section heading to fold it.</div>
     <details class="msec" open><summary>📞 Call details</summary>
-    <div class="set" style="gap:10px">
+    <div class="set four" style="gap:10px">
       <div style="grid-column:1/-1" id="fStatus"><label>Call status<span class="rqd">*</span></label>${rch('mStatus', Object.entries(STATUS).map(([k,o])=>[k,o.l]), v('status','answered'))}</div>
       <div><label>Time of call<span class="rqd">*</span></label><input id="mTime" type="time" value="${v('time',tnow)}"></div>
       <div><label>Talk time (min)<span class="rqd">*</span> <span class="muted" style="font-weight:400">(if answered)</span></label><input id="mDur" type="number" min="0" step="0.5" value="${c&&c.dur?(c.dur/60).toFixed(1):''}" placeholder="e.g. 3"></div>
       <div><label>Language spoken<span class="rqd">*</span></label><select id="mLang"><option value="">— choose —</option>${opt(LANGS.map(l=>[l.n,l.n]), v('lang',cand.lang))}</select></div>
       <div><label>Interest level<span class="rqd">*</span></label><select id="mLvl">${opt([['','— choose —'],['3','High'],['2','Medium'],['1','Low'],['0','Not interested']], v('lvl',''))}</select></div>
+
+      <div style="grid-column:1/-1"><label>Candidate's message / query <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="mMsg" rows="2" placeholder="What did the student or parent say? e.g. wants colleges near home, fees under 1.5 L…">${c&&c.query?esc(c.query.text):''}</textarea></div>
+      <div style="grid-column:1/-1"><label>Reverted back <span class="muted" style="font-weight:400">(optional · empty = No)</span></label>${cbx('mRev', [['Call back','Call back'],['WhatsApp reply','WhatsApp'],['SMS reply','SMS']], c&&c.reverted?c.revertVia:'')}</div>
+      <div style="grid-column:1/-1"><label>Admission status <span class="muted" style="font-weight:400">(optional · empty = Not converted)</span></label>${cbx('mAdm', ['In process','Joined','Dropped'].map(a=>[a,a]), ['In process','Joined','Dropped'].includes(v('admission',''))?v('admission',''):'', "document.getElementById('mColW').style.display=document.getElementById('mAdm').value?'':'none'")}</div>
+      <div id="mColW" style="grid-column:1/-1;${['Joined','In process','Dropped'].includes(v('admission',''))?'':'display:none'}"><label>College</label><select id="mCol" onchange="mcCtx.college=this.value"></select></div>
+      <div style="grid-column:1/-1"><label>Counsellor notes <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="mNotes" rows="2" placeholder="Next step, call-back time…">${c?esc(c.notes||''):''}</textarea></div>
     </div></details>
     <details class="msec" open><summary>📍 Location the student wants</summary><div class="set" style="gap:10px">
       <div><label>Preferred district (Karnataka)<span class="rqd">*</span></label><select id="mDist" onchange="mcCtx.dist=this.value==='Any'?'':this.value;mcCtx.anyDist=this.value==='Any';mcCtx.area='';renderArea();renderColleges()"><option value="">— choose —</option><option value="Any" ${c&&c.locality&&c.locality.district==='Any district'?'selected':''}>Any district (no preference)</option>${KA_DISTRICTS.map(d=>`<option ${c&&c.locality&&c.locality.district===d?'selected':''}>${d}</option>`).join('')}</select></div>
@@ -2074,13 +2082,6 @@ function openManual(qi, callId, candId){
     </div></details>
     <details class="msec" open><summary>🎓 Course discussed<span class="rqd">*</span></summary><div id="mCourseBox"></div></details>
     <details class="msec" id="mColSec"><summary>🏫 College suggestions <span id="mColCount" class="muted" style="font-weight:400"></span></summary><div id="mcRight"></div></details>
-    <details class="msec" open><summary>💬 Follow-up &amp; admission</summary><div class="set" style="gap:10px">
-      <div style="grid-column:1/-1"><label>Candidate's message / query <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="mMsg" rows="2" placeholder="What did the student or parent say? e.g. wants colleges near home, fees under 1.5 L…">${c&&c.query?esc(c.query.text):''}</textarea></div>
-      <div style="grid-column:1/-1"><label>Reverted back <span class="muted" style="font-weight:400">(optional · empty = No)</span></label>${cbx('mRev', [['Call back','Call back'],['WhatsApp reply','WhatsApp'],['SMS reply','SMS']], c&&c.reverted?c.revertVia:'')}</div>
-      <div style="grid-column:1/-1"><label>Admission status <span class="muted" style="font-weight:400">(optional · empty = Not converted)</span></label>${cbx('mAdm', ['In process','Joined','Dropped'].map(a=>[a,a]), ['In process','Joined','Dropped'].includes(v('admission',''))?v('admission',''):'', "document.getElementById('mColW').style.display=document.getElementById('mAdm').value?'':'none'")}</div>
-      <div id="mColW" style="grid-column:1/-1;${['Joined','In process','Dropped'].includes(v('admission',''))?'':'display:none'}"><label>College</label><select id="mCol" onchange="mcCtx.college=this.value"></select></div>
-      <div style="grid-column:1/-1"><label>Counsellor notes <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="mNotes" rows="2" placeholder="Next step, call-back time…">${c?esc(c.notes||''):''}</textarea></div>
-    </div></details>
     <div class="aerr" id="mErr"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;position:sticky;bottom:0;background:var(--card);padding:10px 0;border-top:1px solid var(--line)"><button class="btn" onclick="closeDrawer()">Close</button><button class="btn pri" onclick="saveManual()">Save call</button></div></div>`;
   // Course picker: level → (PU) Science / Commerce → tick boxes for the courses under it
