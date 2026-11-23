@@ -295,12 +295,32 @@ textarea,.db select{width:100%;padding:9px;border:1px solid var(--line);border-r
 .minich .card{margin:0;padding:10px 12px}.minich h3{font-size:13px;margin:0 0 4px}.minich .ch{height:170px}
 .filters.compact select{flex:none;width:auto;max-width:280px}
 .crumbs a{color:var(--brand);text-decoration:none;font-weight:600}.crumbs a:hover{text-decoration:underline}
-.setwrap{display:grid;grid-template-columns:210px 1fr;gap:16px;align-items:start}
-.setnav{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px;position:sticky;top:10px}
-.setnav div{padding:9px 10px;border-radius:8px;cursor:pointer;display:flex;gap:8px;align-items:center;font-size:14px}
-.setnav div:hover{background:var(--bg)}
-.setnav div.on{background:#4f46e5;color:#fff}.setnav div.on small{color:#e0e7ff}
-.sgrid.one{grid-template-columns:1fr}
+.uchip{display:inline-flex;align-items:center;gap:10px;padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:13px;font-weight:600;white-space:nowrap}
+.uchip.prev{background:#fff7ed;border-color:#fdba74;color:#9a3412}.uchip a{color:#9a3412;font-weight:600;text-decoration:none;font-size:12px}
+.setwrap{display:grid;grid-template-columns:290px 1fr;gap:20px;align-items:start}
+.setnav{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;position:sticky;top:10px}
+.setnav>div{padding:12px 14px;border-radius:10px;cursor:pointer;display:flex;gap:12px;align-items:center;border-left:4px solid transparent;margin:2px 0}
+.setnav>div:hover{background:var(--bg)}
+.setnav .sic{font-size:20px;width:28px;text-align:center}
+.setnav b{display:block;font-size:14.5px;font-weight:600}.setnav small{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.setnav>div.on{background:var(--brand2);border-left-color:var(--brand)}.setnav>div.on b{color:var(--brand)}
+.sgrid.one{grid-template-columns:minmax(0,1fr)}
+.setwrap>*,.sgrid.one>*{min-width:0}
+.sgrid.one .card{padding:20px 24px}.sgrid.one .card h3{font-size:17px;margin-bottom:14px}
+.themes.big .th{width:150px;padding:10px;font-size:13px;font-weight:600}
+.th .tprev{height:74px;border-radius:8px;margin-bottom:8px;position:relative;overflow:hidden;border:1px solid var(--line)}
+.th .tprev i{position:absolute;left:0;top:0;bottom:0;width:30%}.th .tprev b{position:absolute;left:38%;top:10px;width:40%;height:10px;border-radius:4px}
+.th .tprev u{position:absolute;left:38%;right:10%;height:8px;border-radius:4px;background:#ffffffaa;border:1px solid #0001}.th .tprev u:nth-of-type(1){top:30px}.th .tprev u:nth-of-type(2){top:46px}
+.optrows>div{display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--line)}.optrows>div:last-child{border-bottom:0}
+.optrows>div>div:first-child{flex:1}.optrows .muted{font-size:12.5px}
+.segb{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex:none}
+.segb button{border:0;background:var(--card);padding:7px 14px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink);border-left:1px solid var(--line)}.segb button:first-child{border-left:0}
+.segb button.on{background:var(--brand);color:#fff}
+body[data-fs=large] .app{zoom:1.12}body[data-fs=small] .app{zoom:.9}
+body[data-dense=compact] td,body[data-dense=compact] th{padding-top:4px!important;padding-bottom:4px!important}
+body[data-stripe=on] tbody tr:nth-child(even) td{background:rgba(99,102,241,.05)}
+.utable select{padding:4px 6px}
+@media(max-width:1500px){.setwrap{grid-template-columns:230px 1fr}.setnav small{display:none}.utable th,.utable td{padding:6px 6px!important}}.utable td{white-space:nowrap}
 @media(max-width:800px){.setwrap{grid-template-columns:1fr}.setnav{position:static;display:flex;flex-wrap:wrap}}
 .sgrid>div>.card{margin-bottom:16px}
 .themes{display:flex;gap:10px;flex-wrap:wrap}
@@ -330,7 +350,7 @@ aside{position:sticky}
   <aside>
     <button class="pinbtn" id="pinBtn" onclick="togglePin()"></button>
     <div class="logo">Admit<span>Connect</span></div>
-    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 13:45 IST</span></div>
+    <div class="sub">Admission counselling · Bot calls · <span style="color:#fbbf24">Demo</span><br><span id="verStamp" style="color:#64748b">Version 23 Nov 2026, 14:00 IST</span></div>
     <div class="sec" id="secDom"></div>
     <div id="domains"></div>
     <div id="adminNav"></div>
@@ -344,9 +364,9 @@ aside{position:sticky}
       <div class="sp"></div>
       <select class="lsel" id="langSel" onchange="setLang(this.value)" title="Interface language">
         <option value="en">🌐 EN</option><option value="ta">🌐 தமிழ்</option><option value="hi">🌐 हिन्दी</option></select>
-      <select class="lsel" id="colSel" onchange="role==='college'?setCollege(this.value):(colFilter=this.value,renderAll())" title="College" style="max-width:140px"></select>
+
       <span class="bellw" id="bellW" style="display:none"><button class="bell" id="bellBtn" onclick="toggleBell(event)" title="Account requests waiting for approval">🔔<span id="bellCount"></span></button><div class="bellp" id="bellP" onclick="event.stopPropagation()"></div></span>
-      <select class="lsel" id="roleSel" onchange="setRole(this.value)" title="Demo: view the app as this role" style="max-width:130px"></select>
+      <span class="uchip" id="userChip"></span>
       <span class="pill" id="modeBadge" style="display:none;background:#fef3c7;color:#92400e;padding:6px 10px" title="Set by the admin in Settings › Calling mode"></span>
       <button class="btn pri" id="campBtn" onclick="startCampaign()" title="Start / pause today's bot-call campaign"></button>
     </div>
@@ -834,11 +854,18 @@ let myCollege = COLLEGE_LIST.map(c=>[c.name, calls.filter(x=>x.admission==='Join
 /* ---------- Calling mode per counsellor (set by admin) ----------
    auto   = bot calls one by one and records everything
    manual = counsellor calls from own phone and fills in the result */
-const MOCK_COUNSELLORS = [{id:'CN-014', name:'Ananya (Counsellor 1)'}, {id:'CN-015', name:'Rohit (Counsellor 2)'}];
+const MOCK_COUNSELLORS = [{id:'CN-014', name:'Ananya'}, {id:'CN-015', name:'Rohit'}];
+// Demo user list (mock): the same list feeds Users & roles, Calling mode and "View as"
+let demoUsers = (()=>{ try{ return JSON.parse(localStorage.getItem('ac_demoUsers')); }catch(e){ return null; } })() || [
+  {id:'ADM-001', name:'Demo Admin', email:'demo@admitconnect.example', phone:'9000000001', role:'admin', active:true},
+  {id:'CN-014',  name:'Ananya',     email:'ananya@admitconnect.example', phone:'9000000014', role:'counsellor', active:true},
+  {id:'CN-015',  name:'Rohit',      email:'rohit@admitconnect.example',  phone:'9000000015', role:'counsellor', active:true},
+  {id:'CP-001',  name:'College office', email:'office@college.example', phone:'9000000101', role:'college', college:null, active:true}];
+const saveDemoUsers = () => store.set('demoUsers', demoUsers);
 let callModes = {'CN-014':'auto', 'CN-015':'manual'};   // loaded from browser storage at start-up
 let defaultMode = 'auto';
 let actingC = 'CN-014';                      // counsellor currently being viewed / logged in
-const counsellors = () => [...MOCK_COUNSELLORS];
+const counsellors = () => demoUsers.filter(u=>u.role==='counsellor' && u.active).map(u=>({id:u.id, name:u.name}));
 const cName = id => (counsellors().find(c=>c.id===id)||{name:id}).name;
 const modeOf = id => callModes[id] || defaultMode;
 // 'both' for admin (full access), 'auto' / 'manual' for a counsellor, null for college
@@ -873,6 +900,10 @@ const store = { get(k,d){ try{ const v=localStorage.getItem('ac_'+k); return v?J
                 set(k,v){ try{ localStorage.setItem('ac_'+k, JSON.stringify(v)); }catch(e){} } };
 let profile = store.get('profile', {name:'', email:'', phone:'', id:'ADM-001', branch:'Chennai', counsellorId:'CN-014'});
 let theme = store.get('theme', 'light');
+let uiPref = Object.assign({fs:'normal', dense:'comfy', stripe:'off'}, store.get('uiPref', {}));
+function applyUi(){ document.body.dataset.fs = uiPref.fs; document.body.dataset.dense = uiPref.dense; document.body.dataset.stripe = uiPref.stripe; }
+function setUi(k,v){ uiPref[k]=v; store.set('uiPref', uiPref); applyUi(); renderAll(); }
+applyUi();
 document.body.dataset.theme = theme;
 // Side panel pinned (full) or unpinned (icon strip) – remembered in this browser
 let pinned = store.get('pinned', window.innerWidth>=1100);
@@ -934,23 +965,20 @@ function renderSide(){
     ${ADMIN_VIEWS.map(a=>`<div class="dom ${curView===a.id?'active':''}" title="${T(a.k)}" onclick="setView('${a.id}')"><span class="ic">${a.ic}</span>${T(a.k)}</div>`).join('')}</div>` : '';
 }
 function renderTop(){
-  const rs = document.getElementById('roleSel');
-  // Role switcher = preview tool: only the real database admin or the demo user may use it
-  const canPreview = !sbMe || sbMe.role==='admin';
-  rs.style.display = '';
-  rs.innerHTML = roleOptions(true);
-  rs.disabled = !canPreview;
-  rs.title = canPreview ? 'User type – preview the app as another role (admin only)' : 'Your user type (set by the admin)';
+  // Header shows who is logged in (read-only). The admin can preview another user from Settings › Users & roles.
+  const realAdmin = !sbMe || sbMe.role==='admin';
+  const me = role==='admin' ? `🛡 ${esc(profile.name||'Admin')} · Admin`
+           : role==='counsellor' ? `🎧 ${esc(cName(actingC))} · Counsellor · ${MODE_LBL[modeOf(actingC)]}`
+           : `🏫 ${esc(myCollege)} · College partner`;
+  const previewing = realAdmin && role!=='admin' && (!sbMe || sbMe.role==='admin');
+  document.getElementById('userChip').innerHTML = previewing
+    ? `<span title="You are previewing this user's view">👁 ${me}</span><a href="#" onclick="event.preventDefault();setRole('admin')" title="Back to your admin view">✕ Back to admin</a>`
+    : me;
+  document.getElementById('userChip').classList.toggle('prev', previewing);
   document.getElementById('bellW').style.display = role==='admin' ? '' : 'none';
   const mb = document.getElementById('modeBadge');
   mb.style.display = role==='counsellor' && !isAdminView() ? '' : 'none';
   mb.innerHTML = role==='counsellor' ? MODE_LBL[modeOf(actingC)]+' calling' : '';
-  const cs = document.getElementById('colSel');
-  const realAdmin = !sbMe || sbMe.role==='admin';
-  cs.style.display = '';
-  cs.innerHTML = role==='college' ? collegeOptions(myCollege) : `<option value="">🏫 All colleges</option>${collegeOptions(colFilter)}`;
-  cs.disabled = !realAdmin;
-  cs.title = realAdmin ? (role==='college' ? 'College being previewed' : 'College – filters Data analytics and Seats (admin only)') : 'College (set by the admin)';
   const isCol = role==='college';
   // Start only where calls happen (main tabs); hidden on Admin pages, Settings and the college view
   document.getElementById('campBtn').style.display = (isCol || isAdminView() || !canAuto()) ? 'none' : '';
@@ -1776,14 +1804,14 @@ function setColField(name, dom, k, val){
 }
 function renderSettings(v){
   // Real database accounts: name / email / phone come from the database (read-only). Demo user: fixed "Demo Admin".
-  const locked = k => (sbMe && ['name','email','phone','id'].includes(k)) || (profile.id==='DEMO' && ['name','email','phone','id'].includes(k));
+  const locked = k => (sbMe && ['name','email','phone','id'].includes(k)) || (profile.id==='DEMO' && ['email','id'].includes(k));   // demo: name / phone editable (this browser only)
   const inp = (k,l,ph)=>`<div><label>${l}${locked(k)?' <span class="muted">(managed by admin)</span>':''}</label><input value="${esc(profile[k]||'')}" placeholder="${ph||''}" ${locked(k)?'disabled':`oninput="setProf('${k}',this.value)"`}></div>`;
   const who = sbMe ? `🟢 Logged in to the database as <b>${esc(sbMe.full_name)}</b> (${sbMe.role})` : profile.id==='DEMO' ? '🟡 Demo user – mock data only, not a database account' : '';
-  const SECS = [['profile','👤','My profile',true],['appearance','🎨','Appearance',true],['message','✉','Message settings',role!=='college'],
-    ['callmode','📞','Calling mode',isAdmin],['bot','🤖','Bot call settings',isAdmin],['users','👥','Users & roles',isAdmin],
-    ['college','🏫','College details',true],['guide','📘','Guides',role!=='college']].filter(x=>x[3]);
+  const SECS = [['profile','👤','My profile',true,'Name, contact, language'],['appearance','🎨','Appearance',true,'Theme, text size, layout'],['message','✉','Message settings',role!=='college',isAdmin?'WhatsApp / SMS texts':'View the message texts'],
+    ['callmode','📞','Calling mode',isAdmin,'Automatic or manual per counsellor'],['bot','🤖','Bot call settings',isAdmin,'Languages, hours, retries'],['users','👥','Users & roles',isAdmin,'Accounts, roles, view as'],
+    ['college','🏫','College details',true,isAdmin?'Fees, seats, location':'View college details'],['guide','📘','Guides',role!=='college','Call flow, keys, colours']].filter(x=>x[3]);
   if (!SECS.some(x=>x[0]===setSec)) setSec = 'profile';
-  v.innerHTML = `<div class="setwrap"><nav class="setnav">${SECS.map(([id,ic,l])=>`<div class="${id===setSec?'on':''}" onclick="setSec='${id}';renderView()"><span>${ic}</span>${l}${id==='message'&&!isAdmin||id==='college'&&!isAdmin?' <small class="muted">(view)</small>':''}</div>`).join('')}</nav>
+  v.innerHTML = `<div class="setwrap"><nav class="setnav">${SECS.map(([id,ic,l,_,d])=>`<div class="${id===setSec?'on':''}" onclick="setSec='${id}';renderView()"><span class="sic">${ic}</span><span><b>${l}</b><small>${d}</small></span></div>`).join('')}</nav>
   <div class="sgrid one">
   <div>
     ${isAdmin?`<div class="card" data-sec="callmode"><h3>📞 Calling mode <small>· per counsellor</small></h3>
@@ -1795,23 +1823,28 @@ function renderSettings(v){
       </tbody></table></div>
       <div class="set" style="margin-top:10px"><div><label>Default for new counsellors</label><select onchange="defaultMode=this.value;store.set('defaultMode',defaultMode);toast('Default calling mode: '+MODE_LBL[defaultMode])">
         <option value="auto" ${defaultMode==='auto'?'selected':''}>🤖 Automatic</option><option value="manual" ${defaultMode==='manual'?'selected':''}>✍ Manual</option></select></div>
-        <div><label>Preview a counsellor's view</label><select onchange="if(this.value)setRole(this.value)"><option value="">— choose —</option>${counsellors().map(c=>`<option value="counsellor:${c.id}">${c.name} (${MODE_LBL[modeOf(c.id)]})</option>`).join('')}</select></div></div></div>
+        <div style="display:flex;align-items:flex-end"><div class="muted" style="font-size:12px">Counsellors come from <a href="#" onclick="event.preventDefault();setSec='users';renderView()">Users &amp; roles</a>. Use 👁 View as there to see their screen.</div></div></div></div>
 `:''}
     <div class="card" data-sec="profile"><h3>👤 My profile <small>· shown in the left panel</small></h3>${who?`<div style="font-size:13px;margin:-4px 0 10px">${who}</div>`:''}<div class="set">
       ${inp('name','Full name','e.g. Karthik S')}
-      ${(!sbMe || sbMe.role==='admin') ? `<div><label>${T('role')} (preview only – does not change any account)</label><select onchange="setRole(this.value)">${roleOptions(false)}</select></div>`
-      : `<div><label>${T('role')}</label><input value="${T(ROLES.find(r=>r[0]===role)[1])} (set by your admin)" disabled></div>`}
+      <div><label>${T('role')}</label><input value="${T(ROLES.find(r=>r[0]===role)[1])}${role==='counsellor'?' · '+MODE_LBL[modeOf(actingC)]:''} (set by the admin)" disabled></div>
       ${inp('email','Email','name@example.com')}
       ${inp('phone','Phone','+91 XXXXX XXXXX')}
-      ${role==='college' ? `<div><label>College</label><select onchange="setCollege(this.value)">${collegeOptions(myCollege)}</select></div>` : inp('id','Employee ID','ADM-001')}
+      ${role==='college' ? `<div><label>College</label><input value="${esc(myCollege)} (set by the admin)" disabled></div>` : inp('id','Employee ID','ADM-001')}
       ${role==='admin' ? inp('branch','Branch / Office','Chennai') : ''}
-    </div><div class="muted" style="font-size:12px;margin-top:8px">Changes here are saved automatically in <b>this browser only</b>. They do not change your login account. To give someone Admin access, approve their account as Admin with the 🔔 bell.</div></div>
+    </div><div class="muted" style="font-size:12px;margin-top:8px">Changes here are saved automatically in <b>this browser only</b>. They do not change your login account. Role and college are set by the admin in Users &amp; roles.</div></div>
 
     ${role==='counsellor'?`<div class="card" data-sec="profile"><h3>📞 Your calling mode</h3><div style="font-size:15px"><b>${MODE_LBL[modeOf(actingC)]}</b> <span class="muted">– set by your admin</span></div>
       <div class="muted" style="font-size:13px;margin-top:6px">${modeOf(actingC)==='auto'?'Press ▶ Start on Today\'s campaign; the bot calls and records everything.':'In Today\'s campaign, press 📞 Log call next to each student after you call them, and fill in the result.'}</div></div>`:''}
-    <div class="card" data-sec="appearance"><h3>🎨 Theme</h3><div class="themes">
-      ${THEMES.map(([id,n,c])=>`<div class="th ${theme===id?'on':''}" onclick="setTheme('${id}')"><div class="sw2">${c.map(x=>`<span style="background:${x}"></span>`).join('')}</div>${n}</div>`).join('')}
+    <div class="card" data-sec="appearance"><h3>🎨 Colour theme <small>· ${THEMES.length} themes</small></h3><div class="themes big">
+      ${THEMES.map(([id,n,c])=>`<div class="th ${theme===id?'on':''}" onclick="setTheme('${id}')"><div class="tprev" style="background:${c[2]}"><i style="background:${c[0]}"></i><b style="background:${c[1]}"></b><u></u><u></u></div>${theme===id?'✔ ':''}${n}</div>`).join('')}
     </div></div>
+    <div class="card" data-sec="appearance"><h3>🔠 Display</h3><div class="optrows">
+      <div><div><b>Text size</b><div class="muted">Makes everything on screen bigger or smaller</div></div><div class="segb">${[['small','Small'],['normal','Normal'],['large','Large']].map(([k,l])=>`<button class="${uiPref.fs===k?'on':''}" onclick="setUi('fs','${k}')">${l}</button>`).join('')}</div></div>
+      <div><div><b>Table density</b><div class="muted">Compact shows more rows at once</div></div><div class="segb">${[['comfy','Comfortable'],['compact','Compact']].map(([k,l])=>`<button class="${uiPref.dense===k?'on':''}" onclick="setUi('dense','${k}')">${l}</button>`).join('')}</div></div>
+      <div><div><b>Left panel</b><div class="muted">Pinned stays open; hidden shows a small tab on the left edge</div></div><div class="segb"><button class="${pinned?'on':''}" onclick="if(!pinned)togglePin();renderView()">📌 Pinned</button><button class="${!pinned?'on':''}" onclick="if(pinned)togglePin();renderView()">Hidden</button></div></div>
+      <div><div><b>Striped table rows</b><div class="muted">Alternate row shading for easier reading</div></div><div class="segb">${[['on','On'],['off','Off']].map(([k,l])=>`<button class="${uiPref.stripe===k?'on':''}" onclick="setUi('stripe','${k}')">${l}</button>`).join('')}</div></div>
+    </div><div class="muted" style="font-size:12px;margin-top:8px">Saved in this browser.</div></div>
 
     <div class="card" data-sec="profile"><h3>🌐 Language${isAdmin?' &amp; general':''}</h3><div class="set">
       <div><label>Interface language</label><select onchange="setLang(this.value)">
@@ -1835,7 +1868,7 @@ function renderSettings(v){
       <div><label>Parallel calls</label><select><option>1 (one by one)</option><option>5</option><option>10</option></select></div>
     </div><div style="margin-top:14px"><button class="btn pri" onclick="toast('Settings saved (demo only)')">Save settings</button></div></div>
 
-    <div class="card mini" data-sec="users"><div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0">👥 Users &amp; roles <small>· real accounts · one admin · created by the admin only</small></h3><span class="sp"></span><button class="btn pri" onclick="openAddUser()">➕ Add user</button></div><div id="acctList" class="muted" style="margin-top:10px">Loading…</div></div>
+    <div class="card mini" data-sec="users"><div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0">👥 Users &amp; roles <small>· ${isDbAdmin()?'real accounts':'demo users (mock)'} · one admin · created by the admin only</small></h3><span class="sp"></span><button class="btn pri" onclick="openAddUser()">➕ Add user</button></div><div id="acctList" class="muted" style="margin-top:10px">Loading…</div></div>
     <div class="card mini" data-sec="users"><h3>🔁 Transfer admin role <small>· there is only one admin</small></h3><div class="muted" style="font-size:13px;margin-bottom:8px">Hand the admin role to another user (e.g. when the owner changes). You become a Counsellor. No backend work needed.</div><div id="xferBox">Loading…</div></div>
     <div class="card" data-sec="college"><h3>🏫 College partner access</h3><div class="set">
       <div style="grid-column:1/-1"><label>College shown in the College partner view (demo)</label><select onchange="myCollege=this.value;toast('College partner view will show '+this.value)">${collegeOptions(myCollege)}</select></div>
@@ -2360,7 +2393,13 @@ async function addUser(){
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return err('Please enter a valid email ID.');
   if (!/^[6-9]\d{9}$/.test(phone)) return err('Phone must be a 10-digit Indian mobile number (starts with 6–9).');
   err('');
-  if (!isDbAdmin()) return err('Log in with the real admin account (not the demo user) to create accounts.');
+  if (!isDbAdmin()){   // demo: add to the mock user list (no email is sent)
+    const id = emp || (rl==='counsellor' ? 'CN-' : 'CP-') + String(100 + demoUsers.length).padStart(3,'0');
+    demoUsers.push({id, name, email, phone, role:rl, college, active:true}); saveDemoUsers();
+    if (rl==='counsellor'){ callModes[id] = mode; store.set('callModes', callModes); }
+    document.getElementById('aOut').innerHTML = `<div class="note" style="background:#ecfdf5;color:#065f46">✔ Demo user <b>${esc(name)}</b> added (${id}). In the live system an invite email is sent.</div>`;
+    renderView(); return;
+  }
   {
     busy('aBtn', true, 'Creating…');
     try {
@@ -2424,9 +2463,27 @@ async function setAccount(id, field, val){
   if (error){ toast('Update failed: '+error.message); console.warn(error); }
   else toast('Saved'); loadPending(); loadAccounts();
 }
+// Demo users table: role, calling mode, college, active, View as (preview)
+function demoUsersTable(){
+  const rb = r => ({admin:'<span class="role" style="background:#ede9fe;color:#5b21b6">🛡 Admin</span>'})[r];
+  return `<div class="muted" style="font-size:12px;margin:0 0 8px">Demo list (mock data, saved in this browser). With the real admin login this shows the accounts in the database.</div>
+  <div style="overflow-x:auto"><table class="utable"><thead><tr><th>Name</th><th>ID</th><th>Email · Phone</th><th>Role</th><th>Calling mode</th><th>College</th><th>Active</th><th></th></tr></thead><tbody>
+  ${demoUsers.map(u=>`<tr style="cursor:default">
+    <td><b>${esc(u.name)}</b>${u.role==='admin'?' <span class="muted">(you)</span>':''}</td><td class="muted">${u.id}</td>
+    <td style="font-size:12px;white-space:nowrap">${esc(u.email)}<br>${esc(u.phone||'')}</td>
+    <td>${u.role==='admin'?rb('admin'):`<select onchange="setDemoUser('${u.id}','role',this.value)"><option value="counsellor" ${u.role==='counsellor'?'selected':''}>🎧 Counsellor</option><option value="college" ${u.role==='college'?'selected':''}>🏫 College partner</option></select>`}</td>
+    <td>${u.role==='counsellor'?`<select onchange="setMode('${u.id}',this.value)"><option value="auto" ${modeOf(u.id)==='auto'?'selected':''}>🤖 Automatic</option><option value="manual" ${modeOf(u.id)==='manual'?'selected':''}>✍ Manual</option></select>`:u.role==='admin'?'<span class="muted">Both</span>':'<span class="muted">—</span>'}</td>
+    <td>${u.role==='college'?`<select style="max-width:190px" onchange="setDemoUser('${u.id}','college',this.value)">${collegeOptions(u.college||myCollege)}</select>`:'<span class="muted">—</span>'}</td>
+    <td>${u.role==='admin'?'✔':`<input type="checkbox" style="width:16px;height:16px" ${u.active?'checked':''} onchange="setDemoUser('${u.id}','active',this.checked)">`}</td>
+    <td>${u.role==='admin'||!u.active?'':`<button class="btn" style="padding:4px 10px;font-size:12px;white-space:nowrap" onclick="viewAs('${u.id}')" title="See the app exactly as this user">👁 View as</button>`}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function setDemoUser(id, k, v){ const u = demoUsers.find(x=>x.id===id); if (!u) return; u[k] = v; saveDemoUsers(); toast(u.name+' updated'); renderAll(); }
+function viewAs(id){ const u = demoUsers.find(x=>x.id===id); if (!u) return;
+  if (u.role==='counsellor') setRole('counsellor:'+u.id); else { myCollege = u.college || myCollege; setRole('college'); } }
 async function loadAccounts(){
   const el = document.getElementById('acctList'); if (!el) return;
-  if (!isDbAdmin()){ el.innerHTML = `<div class="muted" style="font-size:13px">${profile.id==='DEMO'?'You are using the <b>demo user</b> (mock data), so the real user list is not shown. Log out and log in with the admin account.':'Only the admin can see this list.'}</div>`; return; }
+  if (!isDbAdmin()){ el.innerHTML = demoUsersTable(); return; }
   const { data, error } = await sb.from('profiles').select('id,full_name,email,phone,role,college,approved,created_at').order('created_at');
   if (error){ el.innerHTML = `<div class="aerr">Could not load accounts: ${esc(error.message)}</div>`; return; }
   data.sort((a,b)=>(b.role==='admin')-(a.role==='admin'));
